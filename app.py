@@ -16,11 +16,7 @@ events_api = "https://api.baserow.io/api/database/rows/table/203056/?user_field_
 access_control_origin_header = "Access-Control-Allow-Origin"
 access_control_origin_value = "*"
 gitcoin_graphql = "https://grants-stack-indexer-v2.gitcoin.co/graphql"
-# fundraising_api = "https://api.baserow.io/api/database/rows/table/306630/"
 fundraising_api = "https://api.baserow.io/api/database/rows/table/306630/?user_field_names=true&filter__field_2209789__link_row_has="
-
-
-
 
 def execute_graphql_query(query):
     response = requests.post(gitcoin_graphql, json={'query': query})
@@ -104,12 +100,11 @@ def project_details(slug):
         baserow_data = get_baserow_data(project_id)
         fundraising_list = []
         fundraising_dict = {}
-        getcoin_list = []
+        gitcoin_list = []
         
         for entry in baserow_data['results']:
             fundraising_dict = {"chain_id": entry['Chain ID'], "project_id": entry['Project ID']}
-            fundraising_list.append(fundraising_dict)
-       
+            fundraising_list.append(fundraising_dict)       
 
         for f in fundraising_list:
             chain_id = f['chain_id']
@@ -136,8 +131,8 @@ def project_details(slug):
             }}
             }}
             """
-            resultql = execute_graphql_query(query)
-            for app in resultql['data']['project']['applications']:
+            graphql_result = execute_graphql_query(query)
+            for app in graphql_result['data']['project']['applications']:
                 formatted_response = [
                     {
                         "Year": app['round']['donationsStartTime'].split('-')[0],  # Assuming donationsStartTime is in format YYYY-MM-DD
@@ -147,17 +142,10 @@ def project_details(slug):
                         "Unique contributors": app['uniqueDonorsCount']
                     }
                 ]
-                getcoin_list.append(formatted_response)
-            
-      
+                gitcoin_list.append(formatted_response) 
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-
-
-
 
     links_data = requests.get(
         links_api + project_id,
