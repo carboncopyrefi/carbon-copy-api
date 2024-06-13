@@ -15,6 +15,33 @@ projectnews_api= "https://api.baserow.io/api/database/rows/table/173781/?user_fi
 events_api = "https://api.baserow.io/api/database/rows/table/203056/?user_field_names=true"
 access_control_origin_header = "Access-Control-Allow-Origin"
 access_control_origin_value = "*"
+gitcoin_graphql = "https://grants-stack-indexer-v2.gitcoin.co/graphql"
+# fundraising_api = "https://api.baserow.io/api/database/rows/table/306630/"
+fundraising_api = "https://api.baserow.io/api/database/rows/table/306630/?user_field_names=true&filter__field_2209789__link_row_has="
+
+
+
+
+def execute_graphql_query(query):
+    response = requests.post(gitcoin_graphql, json={'query': query})
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Query failed to run with a {response.status_code}. {response.text}")
+
+def get_baserow_data(project_id):
+    url = fundraising_api + project_id
+    headers = {
+        'Authorization': baserow_token,
+        'Content-Type' : 'application/json'
+
+    }
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Failed to fetch Baserow data with status {response.status_code}. {response.text}")
 
 class TopProject:
     def __init__(self, name, description, sectors, id, slug, protocol):
@@ -26,7 +53,7 @@ class TopProject:
         self.protocol = protocol
 
 class Project:
-    def __init__(self, id, slug, name, description_short, links, sectors, description_long, categories, logo, team, coverage, news, top16, location, protocol, responses):
+    def __init__(self, id, slug, name, description_short, links, sectors, description_long, categories, logo, team, coverage, news, top16, location, protocol, responses,fundraising):
         self.id = id
         self.slug = slug
         self.name = name
@@ -43,6 +70,7 @@ class Project:
         self.location = location
         self.protocol = protocol
         self.response = responses
+        self.fundraising = fundraising
 
 
 def project_details(slug):
@@ -60,6 +88,7 @@ def project_details(slug):
     r_dict = {}
     r_list = []
 
+
     data = requests.get(
         api,
         headers={
@@ -70,6 +99,65 @@ def project_details(slug):
 
     result = data.json()['results'][0]
     project_id = str(result['id'])
+    
+    try:
+        baserow_data = get_baserow_data(project_id)
+        fundraising_list = []
+        fundraising_dict = {}
+        getcoin_list = []
+        
+        for entry in baserow_data['results']:
+            fundraising_dict = {"chain_id": entry['Chain ID'], "project_id": entry['Project ID']}
+            fundraising_list.append(fundraising_dict)
+       
+
+        for f in fundraising_list:
+            chain_id = f['chain_id']
+            gitcoin_project_id = f['project_id']
+
+            query = f"""
+            query MyQuery {{
+            project(
+                chainId: {chain_id}
+                id: "{gitcoin_project_id}"
+            ) {{
+                applications(filter: {{status: {{equalTo: APPROVED}}}}) {{
+                id
+                round {{
+                    id
+                    donationsStartTime
+                    roundMetadata
+                }}
+                status
+                uniqueDonorsCount
+                totalDonationsCount
+                totalAmountDonatedInUsd
+                }}
+            }}
+            }}
+            """
+            resultql = execute_graphql_query(query)
+            for app in resultql['data']['project']['applications']:
+                formatted_response = [
+                    {
+                        "Year": app['round']['donationsStartTime'].split('-')[0],  # Assuming donationsStartTime is in format YYYY-MM-DD
+                        "Round name": app['round']['roundMetadata'].get('name', 'N/A'),  # Assuming roundMetadata has a 'name' key
+                        "Total donated USD": app['totalAmountDonatedInUsd'],
+                        "Total contributors": app['totalDonationsCount'],
+                        "Unique contributors": app['uniqueDonorsCount']
+                    }
+                ]
+                getcoin_list.append(formatted_response)
+            
+      
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+
 
     links_data = requests.get(
         links_api + project_id,
@@ -136,7 +224,7 @@ def project_details(slug):
 
     sorted_r_list = sorted(r_list, key=lambda d:d['survey'], reverse=True)
 
-    project = Project(project_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], result['Description'], result['Category'], result['Logo'], result['Founders'], sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list)
+    project = Project(project_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], result['Description'], result['Category'], result['Logo'], result['Founders'], sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list,getcoin_list)
     project_dict = vars(project)
 
     return project_dict
@@ -421,6 +509,7 @@ def articles():
 def projectDetails(slug):
     data = project_details(slug)
     response = jsonify(data)
+
     response.headers.add(access_control_origin_header, access_control_origin_value)
     return response
 
@@ -567,3 +656,7 @@ def response():
 
 if __name__ == "__main__":
     app.run()
+
+
+
+
