@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, json
-import feedparser, requests, random, datetime, os
+import feedparser, requests, random, datetime, os, re, utils
 from flask_cors import CORS
 from feedwerk.atom import AtomFeed
 
@@ -8,42 +8,26 @@ CORS(app, resources={r"/response*": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['TOKEN'] = 'PS91RoTw8hOvLgK4TyeTsEKv13ZFUhQR'
 
-category = "environment"
-base_company_api = "https://api.baserow.io/api/database/rows/table/171320/"
-baserow_token = 'Token RPlLXKDgBX8TscVGjKjI33djLk89X1qf'
-projectnews_api= "https://api.baserow.io/api/database/rows/table/173781/?user_field_names=true"
-events_api = "https://api.baserow.io/api/database/rows/table/203056/?user_field_names=true"
 access_control_origin_header = "Access-Control-Allow-Origin"
 access_control_origin_value = "*"
-gitcoin_graphql = "https://grants-stack-indexer-v2.gitcoin.co/graphql"
-fundraising_api = "https://api.baserow.io/api/database/rows/table/306630/?user_field_names=true&filter__field_2209789__link_row_has="
 
-def execute_graphql_query(query):
-    response = requests.post(gitcoin_graphql, json={'query': query})
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"Query failed to run with a {response.status_code}. {response.text}")
+date_format = "%B %d, %Y"
+category = "environment"
 
-def get_baserow_data(project_id):
-    url = fundraising_api + project_id
-    headers = {
-        'Authorization': baserow_token,
-        'Content-Type' : 'application/json'
-
-    }
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"Failed to fetch Baserow data with status {response.status_code}. {response.text}")
+baserow_table_company = "171320"
+baserow_table_company_news = "173781"
+baserow_table_company_links = "171328"
+baserow_table_company_coverage = "171322"
+baserow_table_company_response = "265286"
+baserow_table_company_fundraising = "306630"
+baserow_table_events = "203056"
+baserow_table_survey_question = "265287"
 
 class TopProject:
-    def __init__(self, name, description, sectors, id, slug, protocol):
+    def __init__(self, name, description, categories, id, slug, protocol):
         self.name = name
         self.description = description
-        self.sectors = sectors
+        self.categories = categories
         self.id = id
         self.slug = slug
         self.protocol = protocol
@@ -68,47 +52,35 @@ class Project:
         self.response = responses
         self.fundraising = fundraising
 
-
 def project_details(slug):
-    api = base_company_api + "?user_field_names=true&filter__field_1248804__equal=" + slug
-    links_api = "https://api.baserow.io/api/database/rows/table/171328/?user_field_names=true&filter__field_1139485__link_row_has="
-    l_dict = {}
-    l_list = []
-    coverage_api = "https://api.baserow.io/api/database/rows/table/171322/?user_field_names=true&filter__field_1139490__link_row_has="
-    c_dict = {}
-    c_list = []
-    news_api = "https://api.baserow.io/api/database/rows/table/173781/?user_field_names=true&filter__field_1156934__link_row_has="
-    n_dict = {}
-    n_list = []
-    response_api = "https://api.baserow.io/api/database/rows/table/265286/?user_field_names=true&filter__field_1887993__link_row_has="
-    r_dict = {}
-    r_list = []
 
-
-    data = requests.get(
-        api,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
-
-    result = data.json()['results'][0]
-    project_id = str(result['id'])
+    # Get company_id from Baserow to use in other requests
+    company_params = "filter__field_1248804__equal=" + slug
+    company_data = utils.get_baserow_data(baserow_table_company, company_params)
+    result = company_data['results'][0]
+    company_id = str(result['id'])
     
-    try:
-        baserow_data = get_baserow_data(project_id)
-        fundraising_list = []
-        fundraising_dict = {}
-        gitcoin_list = []
-        
-        for entry in baserow_data['results']:
-            fundraising_dict = {"chain_id": entry['Chain ID'], "project_id": entry['Project ID']}
-            fundraising_list.append(fundraising_dict)       
+    # Get data from CompanyFundraising table
+    fundraising_params = "filter__field_2209789__link_row_has=" + company_id
+    fundraising_data = utils.get_baserow_data(baserow_table_company_fundraising, fundraising_params)
 
-        for f in fundraising_list:
-            chain_id = f['chain_id']
-            gitcoin_project_id = f['project_id']
+    fundraising_dict = {}
+    fundraising_list = []
+    
+    for entry in fundraising_data['results']:
+        if entry['Project ID'] == "":
+            amount = float(entry["Amount"])
+            formatted_amount = '{:,.2f}'.format(amount)
+            if entry['Round'] is None:
+                round = ""
+            else:
+                round = entry['Round']['value']
+            fundraising_dict = {"type": entry['Type']['value'], "round": round, "amount": formatted_amount, "year": entry["Date"].split('-')[0], "url": entry["Link"]}
+            fundraising_list.append(fundraising_dict)
+
+        elif entry['Project ID']:
+            chain_id = entry['Chain ID']
+            gitcoin_project_id = entry['Project ID']
 
             query = f"""
             query MyQuery {{
@@ -131,107 +103,84 @@ def project_details(slug):
             }}
             }}
             """
-            graphql_result = execute_graphql_query(query)
+            graphql_result = utils.execute_graphql_query(query)
             for app in graphql_result['data']['project']['applications']:
-                formatted_response = [
-                    {
-                        "Year": app['round']['donationsStartTime'].split('-')[0],  # Assuming donationsStartTime is in format YYYY-MM-DD
-                        "Round name": app['round']['roundMetadata'].get('name', 'N/A'),  # Assuming roundMetadata has a 'name' key
-                        "Total donated USD": app['totalAmountDonatedInUsd'],
-                        "Total contributors": app['totalDonationsCount'],
-                        "Unique contributors": app['uniqueDonorsCount']
-                    }
-                ]
-                gitcoin_list.append(formatted_response) 
-            
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+                formatted_response = {
+                        "year": app['round']['donationsStartTime'].split('-')[0],  # Assuming donationsStartTime is in format YYYY-MM-DD
+                        "round": app['round']['roundMetadata'].get('name', 'N/A'),  # Assuming roundMetadata has a 'name' key
+                        "amount": round(app['totalAmountDonatedInUsd'],2),
+                        "total_contributors": app['totalDonationsCount'],
+                        "unique_contributors": app['uniqueDonorsCount'],
+                        "type": "Gitcoin Grants"
+                }
+                
+                fundraising_list.append(formatted_response)  
 
-    links_data = requests.get(
-        links_api + project_id,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
+    sorted_fundraising_list = sorted(fundraising_list, key=lambda d: d['year'], reverse=True)
 
-    links_result = links_data.json()['results']
+    # Get data from Links table
+    l_dict = {}
+    l_list = []
+    links_params = "filter__field_1139485__link_row_has=" + company_id
+    links_data = utils.get_baserow_data(baserow_table_company_links, links_params)
 
-    for l in links_result:
+    for l in links_data['results']:
         l_dict = {"platform": l['Platform']['value'], "url": l['URL']}
         l_list.append(l_dict)
 
+    # Get data from Coverage table
+    c_dict = {}
+    c_list = []
+    coverage_params = "filter__field_1139490__link_row_has=" + company_id
+    coverage_data = utils.get_baserow_data(baserow_table_company_coverage, coverage_params)
 
-    coverage_data = requests.get(
-        coverage_api + project_id,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
-
-    coverage_result = coverage_data.json()['results']
-
-    for a in coverage_result:
+    for a in coverage_data['results']:
         published_time = datetime.datetime.strptime(a['Publish Date'], "%Y-%m-%d")
-        c_dict = {"headline": a['Headline'], "publication": a['Publication']['value'], "url": a['Link'], "date": published_time}
+        formatted_time = published_time.strftime(date_format)
+        c_dict = {"headline": a['Headline'], "publication": a['Publication']['value'], "url": a['Link'], "date": formatted_time, "sort_date": published_time}
         c_list.append(c_dict)
 
-    sorted_c_list = sorted(c_list, key=lambda d: d['date'], reverse=True)
+    sorted_c_list = sorted(c_list, key=lambda d: d['sort_date'], reverse=True)
 
-    news_data = requests.get(
-        news_api + project_id,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
+    # Get data from News table
+    n_dict = {}
+    n_list = []
+    news_params = "filter__field_1156934__link_row_has=" + company_id
+    news_data = utils.get_baserow_data(baserow_table_company_news, news_params)
 
-    news_result = news_data.json()['results']
-
-    for n in news_result[0:5]:
+    for n in news_data['results']:
         published_time = datetime.datetime.strptime(n['Created on'], "%Y-%m-%dT%H:%M:%S.%fZ")
-        n_dict = {"headline": n['Headline'], "snippet": n['Snippet'], "url": n['Link'], "date": published_time}
+        formatted_time = published_time.strftime(date_format)
+        n_dict = {"headline": n['Headline'], "snippet": n['Snippet'], "url": n['Link'], "date": formatted_time, "sort_date": published_time}
         n_list.append(n_dict)
 
-    sorted_n_list = sorted(n_list, key=lambda d:d['date'], reverse=True)
+    sorted_n_list = sorted(n_list, key=lambda d:d['sort_date'], reverse=True)
 
-    response_data = requests.get(
-        response_api + project_id,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
+    # Get data from RegenSurveyResponse table
+    r_dict = {}
+    r_list = []
+    response_params = "filter__field_1887993__link_row_has=" + company_id
+    response_data = utils.get_baserow_data(baserow_table_company_response, response_params)
 
-    response_result = response_data.json()['results']
-
-    for r in response_result:
+    for r in response_data['results']:
         r_dict = {"survey": r['Survey'][0]['value']}
         r_list.append(r_dict)
 
     sorted_r_list = sorted(r_list, key=lambda d:d['survey'], reverse=True)
 
-    project = Project(project_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], result['Description'], result['Category'], result['Logo'], result['Founders'], sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list,getcoin_list)
+    # Create project object and return
+    project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], result['Description'], result['Category'], result['Logo'], result['Founders'], sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list, sorted_fundraising_list)
     project_dict = vars(project)
 
     return project_dict
 
 def top_projects_list():
     p_list = []
+    params = "filter__field_1147468__boolean=true"
+    data = utils.get_baserow_data(baserow_table_company, params)
 
-    api = base_company_api + "?user_field_names=true&filter__field_1147468__boolean=true"
-    data = requests.get(
-        api,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
-
-    result = data.json()
-    for item in result['results']:
-        project = TopProject(item['Name'], item['One-sentence Description'], item['Sector'], item['id'], item['Slug'], item['Location'])
+    for item in data['results']:
+        project = TopProject(item['Name'], item['One-sentence Description'], item['Category'], item['id'], item['Slug'], item['Location'])
         project_dict = vars(project)
         p_list.append(project_dict)
 
@@ -239,30 +188,42 @@ def top_projects_list():
 
 def projects_list():
     p_list = []
+    page_size = "200"
+    params = "filter__field_1248804__not_empty&size=200"
+    data = utils.get_baserow_data(baserow_table_company, params)
 
-    api = base_company_api + "?user_field_names=true&filter__field_1248804__not_empty&size=200"
-
-    data = requests.get(
-        api,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
-
-    result = data.json()
-    for item in result['results']:
-        s_list = []
+    for item in data['results']:
+        c_list = []
         protocol_list = []
-        for sector in item['Sector']:
-            s_list.append(sector['value'])
+
+        for category in item['Category']:
+            c_list.append(category['value'])
 
         for protocol in item['Protocol']:
             protocol_list.append(protocol['value'])
 
-        project = TopProject(item['Name'], item['One-sentence Description'], s_list, item['id'], item['Slug'], protocol_list)
+        project = TopProject(item['Name'], item['One-sentence Description'], c_list, item['id'], item['Slug'], protocol_list)
         project_dict = vars(project)
         p_list.append(project_dict)
+    
+    if data['count'] > int(page_size):
+        p2_params = "filter__field_1248804__not_empty&page=2&size=200"
+        p2_data = utils.get_baserow_data(baserow_table_company, p2_params)
+        print(p2_data['count'])
+
+        for item in p2_data['results']:
+            c_list = []
+            protocol_list = []
+
+            for category in item['Category']:
+                c_list.append(category['value'])
+
+            for protocol in item['Protocol']:
+                protocol_list.append(protocol['value'])
+
+            project = TopProject(item['Name'], item['One-sentence Description'], c_list, item['id'], item['Slug'], protocol_list)
+            project_dict = vars(project)
+            p_list.append(project_dict)
 
     sorted_p_list = sorted(p_list, key=lambda x:x['name'].lower())
 
@@ -282,28 +243,14 @@ def news_list():
     end = request.args.get('endDate')
 
     if start is not None or end is not None:
-        week_api = projectnews_api + "&filter__field_1156936__date_after_or_equal=" + start + "T00:00:01Z" + "&filter__field_1156936__date_before_or_equal=" + end + "T23:59:59Z" + "&filter_type=AND&order_by=-Created on"
-
-        data = requests.get(
-            week_api,
-            headers={
-                'Content-Type' : 'application/json',
-                'Authorization': baserow_token
-            }
-        )
+        params = "&filter__field_1156936__date_after_or_equal=" + start + "T00:00:01Z" + "&filter__field_1156936__date_before_or_equal=" + end + "T23:59:59Z" + "&filter_type=AND&order_by=-Created on"
+        data = utils.get_baserow_data(baserow_table_company_news, params)
 
     else:
-        data = requests.get(
-            projectnews_api + "&size=50&order_by=-Created on",
-            headers={
-                'Content-Type' : 'application/json',
-                'Authorization': baserow_token
-            }
-        )
+        params = "&size=50&order_by=-Created on"
+        data = utils.get_baserow_data(baserow_table_company_news, params)
 
-    result = data.json()
-
-    for item in result['results']:
+    for item in data['results']:
         if item['Display'] is True:
             published_time = datetime.datetime.strptime(item['Created on'], "%Y-%m-%dT%H:%M:%S.%fZ")
             news = News(item['Headline'], item['Snippet'], item['Company'][0]['value'], item['Link'], published_time)
@@ -399,18 +346,10 @@ class Event:
 
 def upcoming_events():
     e_list = []
-
-    api = events_api + "&filter__field_1394864__date_after=" + str(datetime.date.today())
-    data = requests.get(
-        api,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
-
-    result = data.json()
-    for item in result['results']:
+    params = "&filter__field_1394864__date_after=" + str(datetime.date.today())
+    data = utils.get_baserow_data(baserow_table_events, params)
+    
+    for item in data['results']:
         event = Event(item['Name'], item['Description'], item['Start Date'], item['End Date'], item['Location']['value'], item['Image'], item['Website'])
         event_dict = vars(event)
         e_list.append(event_dict)
@@ -434,45 +373,24 @@ def survey_questions():
     p_list = []
     page_size = '200'
 
-    p_api = base_company_api + '?user_field_names=true&include=Name&size=' + page_size
-    p_data = requests.get(
-        p_api,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
+    p_params = "?user_field_names=true&include=Name&size=" + page_size
+    p_data = utils.get_baserow_data(baserow_table_company, p_params)
 
-    p_result = p_data.json()['results']
-    for p in p_result:
+    for p in p_data['results']:
         p_list.append(p['Name'])
 
-    if p_data.json()['count'] > int(page_size):
-        p2_data = requests.get(
-            p_data.json()['next'],
-            headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-            }
-        )
+    if p_data['count'] > int(page_size):
+        p2_params = "include=Name&page=2&size=200"
+        p2_data = utils.get_baserow_data(baserow_table_company, p2_params)
 
-        p2_result = p2_data.json()['results']
-        for p in p2_result:
+        for p in p2_data['results']:
             p_list.append(p['Name'])
 
     sorted_p_list = sorted(p_list, key=str.casefold)
 
-    api = "https://api.baserow.io/api/database/rows/table/265287/?user_field_names=true"
-    data = requests.get(
-        api,
-        headers={
-            'Content-Type' : 'application/json',
-            'Authorization': baserow_token
-        }
-    )
+    data = utils.get_baserow_data(baserow_table_survey_question,"")
 
-    result = data.json()
-    for item in result['results']:
+    for item in data['results']:
         question = SurveyQuestion(item['Name'], item['Text'], item['Category']['value'], item['Tip'], item['Answer 1'], item['Answer 2'], item['Answer 3'])
         question_dict = vars(question)
         q_list.append(question_dict)
@@ -484,7 +402,78 @@ def survey_questions():
         'questions': sorted_q_list
     })
 
+def project_content_rss(slug):
+    generator = ""    
+    params = "?user_field_names=true&filter__field_1248804__equal=" + slug
+    data = utils.get_baserow_data(baserow_table_company, params)
+    result = data['results'][0]
 
+    if result['Content feed'] == "":
+        return None        
+    else:
+        content_feed_url = str(result['Content feed'])
+        article_list = []
+        content_list = []
+
+        f = feedparser.parse(content_feed_url)
+        if f.feed['generator'] == 'Medium':
+            generator = 'Medium'
+
+        for article in f.entries[0:3]:
+            mainImage = ""
+            date = datetime.datetime.strptime(article.published, "%a, %d %b %Y %H:%M:%S %Z")
+            formatted_date = date.strftime(date_format)
+            if generator == 'Medium':
+                match = re.search(r'<img[^>]+src="([^">]+)"', article.content[0]['value'])
+                mainImage = match.group(1)
+            elif hasattr(article, 'media_content'):
+                mainImage = article.media_content[0]['url']
+            elif hasattr(article, 'links'):
+                for link in article.links:
+                    if link.type == "image/jpg":
+                        mainImage = link.href
+                    else:
+                        continue
+            else:
+                continue
+        
+            a = Article(article.title, article.link, mainImage, formatted_date, formatted_date)
+            article_list.append(a)
+
+        for item in article_list:
+            item_dict = vars(item)
+            content_list.append(item_dict)
+
+    return content_list
+
+class Token():
+    def __init__(self, symbol, price_usd, percent_change):
+        self.symbol = symbol
+        self.price_usd = price_usd
+        self.percent_change = percent_change
+
+def project_token(slug):
+    params = "?user_field_names=true&filter__field_1248804__equal=" + slug
+    data = utils.get_baserow_data(baserow_table_company, params)
+    result = data['results'][0]
+
+    if result['Token'] is not None:
+
+        token_id = result['Token']
+
+        api = "https://api.coingecko.com/api/v3/coins/markets?ids=" + token_id + "&vs_currency=usd"
+
+        response = requests.get(api)
+        r = response.json()
+        token_data = r[0]
+
+        token = Token(token_data['symbol'].upper(), round(token_data['current_price'],5), round(token_data['price_change_percentage_24h'],2))
+
+        return vars(token)
+    else:
+        return None
+
+# Routes
 @app.route('/articles', methods=['GET'])
 def articles():
     data = feed()
@@ -498,6 +487,20 @@ def projectDetails(slug):
     data = project_details(slug)
     response = jsonify(data)
 
+    response.headers.add(access_control_origin_header, access_control_origin_value)
+    return response
+
+@app.route('/projects/<slug>/content', methods=['GET'])
+def projectContent(slug):
+    data = project_content_rss(slug)
+    response = jsonify(data)
+    response.headers.add(access_control_origin_header, access_control_origin_value)
+    return response
+
+@app.route('/projects/<slug>/token', methods=['GET'])
+def projectToken(slug):
+    data = project_token(slug)
+    response = jsonify(data)
     response.headers.add(access_control_origin_header, access_control_origin_value)
     return response
 
@@ -528,7 +531,6 @@ def refi_feed():
     news_feed = AtomFeed(title='ReFi News', feed_url=request.url, url=request.url_root)
     for item in data:
         news_feed.add(item['title'],item['snippet'],content_type='html',author=item['company'],url=item['link'],updated=item['date'],published=item['date'])
-
     return news_feed.get_response()
 
 @app.route('/events', methods=['GET'])
