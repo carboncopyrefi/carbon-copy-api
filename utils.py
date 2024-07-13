@@ -39,6 +39,15 @@ def get_coingeckoterminal_data(network, token_id):
     else:
         raise Exception(f"Failed to fetch Coingecko Terminal data with status {response.status_code}. {response.text}")
 
+def get_karma_gap_data(karma_slug):
+
+    api = "https://gapapi.karmahq.xyz/projects/" + karma_slug + "/milestones"
+    response = requests.get(api)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Failed to fetch Karma GAP data with status {response.status_code}. {response.text}")
+
 def execute_graphql_query(query):
     response = requests.post(gitcoin_graphql, json={'query': query})
     if response.status_code == 200:

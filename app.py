@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, json
-import feedparser, requests, random, datetime, os, re, utils
+import feedparser, requests, random, datetime, os, re, utils, markdown
 from flask_cors import CORS
 from feedwerk.atom import AtomFeed
 
@@ -502,9 +502,18 @@ class Token():
         self.price_usd = price_usd
         self.percent_change = percent_change
 
+class Milestone():
+    def __init__(self, name, description, status, due_date, due_date_unix, completed_msg):
+        self.name = name
+        self.description = description
+        self.status = status
+        self.due_date = due_date
+        self.due_date_unix = due_date_unix
+        self.completed_msg = completed_msg
+
 def project_content(slug):
     # RSS feed content
-    generator = ""    
+    generator = ""   
     params = "?user_field_names=true&filter__field_1248804__equal=" + slug
     data = utils.get_baserow_data(baserow_table_company, params)
     result = data['results'][0]
@@ -548,9 +557,9 @@ def project_content(slug):
             content_list.append(item_dict)
 
     # Token data
-
-    if result['Token'] is not None:
-
+    if result['Token'] is None or len(result['Token']) < 1:
+        token = None
+    else:
         token_id = result['Token']
 
         if re.search(r'^[^:]+:[^:]+$', token_id):
@@ -567,12 +576,38 @@ def project_content(slug):
             token = Token(token_data['symbol'].upper(), round(token_data['current_price'],5), round(token_data['price_change_percentage_24h'],2))
         
         token = vars(token)
+
+    # Karma GAP data
+    if result['Karma slug'] is None or len(result['Karma slug']) < 1:
+        sorted_milestone_list = None
     else:
-        token = None
+        milestone_list = []
+        completed_msg = None
+        karma_slug = result['Karma slug']
+        milestone_data = utils.get_karma_gap_data(karma_slug)
+
+        for m in milestone_data:
+            due_date = datetime.datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
+            description = markdown.markdown(m['data']['description'])
+            if "completed" in m.keys():
+                status = "Completed"
+                completed_msg = markdown.markdown(m['completed']['data']['reason'])
+            elif datetime.datetime.fromtimestamp(m['data']['endsAt']) > datetime.datetime.now():
+                status = "In Progress"
+            elif datetime.datetime.fromtimestamp(m['data']['endsAt']) < datetime.datetime.now():
+                status = "Overdue"
+            else:
+                status = "In Progress"
+
+            milestone = Milestone(m['data']['title'], description, status, due_date, m['data']['endsAt'], completed_msg)
+            milestone_list.append(vars(milestone))
+        
+        sorted_milestone_list = sorted(milestone_list, key=lambda d: d['due_date_unix'], reverse=True)
     
     content = {
             'feed': content_list,
-            'token': token
+            'token': token,
+            'milestones': sorted_milestone_list
             }
 
     return content
