@@ -1,6 +1,7 @@
 import requests
 from flask import json
 from collections import defaultdict
+from datetime import datetime
 
 baserow_api = "https://api.baserow.io/api/database/rows/table/"
 baserow_token = 'Token RPlLXKDgBX8TscVGjKjI33djLk89X1qf'
@@ -71,3 +72,17 @@ def calculate_dict_sums(data):
     json_compatible_sums.sort(key=lambda x: x["round"], reverse=True)
 
     return json_compatible_sums
+
+def parse_datetime(datetime_str):
+    formats = [
+        "%a, %d %b %Y %H:%M:%S %Z",
+        "%a, %d %b %Y %H:%M:%S %z"
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(datetime_str, fmt)
+        except ValueError:
+            continue
+
+    raise ValueError(f"Time data '{datetime_str}' does not match any format")

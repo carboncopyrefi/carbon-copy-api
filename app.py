@@ -26,13 +26,13 @@ baserow_table_events = "203056"
 baserow_table_survey_question = "265287"
 
 class TopProject:
-    def __init__(self, name, description, categories, id, slug, protocol):
+    def __init__(self, name, description, categories, id, slug, logo):
         self.name = name
         self.description = description
         self.categories = categories
         self.id = id
         self.slug = slug
-        self.protocol = protocol
+        self.logo = logo
 
 class Project:
     def __init__(self, id, slug, name, description_short, links, sectors, description_long, categories, logo, team, coverage, news, top16, location, protocol, responses,fundraising):
@@ -200,7 +200,7 @@ def top_projects_list():
     data = utils.get_baserow_data(baserow_table_company, params)
 
     for item in data['results']:
-        project = TopProject(item['Name'], item['One-sentence Description'], item['Category'], item['id'], item['Slug'], item['Location'])
+        project = TopProject(item['Name'], item['One-sentence Description'], item['Category'], item['id'], item['Slug'])
         project_dict = vars(project)
         p_list.append(project_dict)
 
@@ -209,44 +209,49 @@ def top_projects_list():
 def projects_list():
     p_list = []
     page_size = "200"
-    params = "filter__field_1248804__not_empty&size=200"
+    params = "filter__field_1248804__not_empty&size=" + page_size + "&include=Name,One-sentence Description,Category,id,Slug,Logo"
     data = utils.get_baserow_data(baserow_table_company, params)
+    projects = data['results']
 
-    for item in data['results']:
+    if data['count'] > int(page_size):
+        params += "&page=2"
+        data = utils.get_baserow_data(baserow_table_company, params)
+        for project in data['results']:
+            projects.append(project)
+
+    for item in projects:
         c_list = []
-        protocol_list = []
 
         for category in item['Category']:
             c_list.append(category['value'])
 
-        for protocol in item['Protocol']:
-            protocol_list.append(protocol['value'])
-
-        project = TopProject(item['Name'], item['One-sentence Description'], c_list, item['id'], item['Slug'], protocol_list)
+        project = TopProject(item['Name'], item['One-sentence Description'], c_list, item['id'], item['Slug'], item['Logo'])
         project_dict = vars(project)
         p_list.append(project_dict)
-    
-    if data['count'] > int(page_size):
-        p2_params = "filter__field_1248804__not_empty&page=2&size=200"
-        p2_data = utils.get_baserow_data(baserow_table_company, p2_params)
-
-        for item in p2_data['results']:
-            c_list = []
-            protocol_list = []
-
-            for category in item['Category']:
-                c_list.append(category['value'])
-
-            for protocol in item['Protocol']:
-                protocol_list.append(protocol['value'])
-
-            project = TopProject(item['Name'], item['One-sentence Description'], c_list, item['id'], item['Slug'], protocol_list)
-            project_dict = vars(project)
-            p_list.append(project_dict)
 
     sorted_p_list = sorted(p_list, key=lambda x:x['name'].lower())
 
     return sorted_p_list
+
+def landscape():
+    projects = projects_list()
+
+    categories_dict = {}
+
+    for project in projects:
+        # Iterate over each category in the project's categories
+        for category in project['categories']:
+            # If the category is not already in the dictionary, add it with an empty list
+            if category not in categories_dict:
+                categories_dict[category] = []
+            # Add the project to the category's list
+            categories_dict[category].append(project)
+    
+    categories_list = [{'category': category, 'projects': projects} for category, projects in categories_dict.items()]
+
+    sorted_categories_list = sorted(categories_list, key=lambda x:x['category'].lower())
+
+    return sorted_categories_list
 
 def category_projects(slug):
     name = slug.replace("-"," ")
@@ -526,30 +531,37 @@ def project_content(slug):
         content_list = []
 
         f = feedparser.parse(content_feed_url)
-        if f.feed['generator'] == 'Medium':
-            generator = 'Medium'
+        if hasattr(f.feed,'generator'): 
+            if f.feed['generator'] == 'Medium':
+                generator = 'Medium'
+        else:
+            generator = None
 
         for article in f.entries[0:3]:
-            mainImage = ""
-            date = datetime.datetime.strptime(article.published, "%a, %d %b %Y %H:%M:%S %Z")
+            mainImage = f.feed['image']['href']
+            link = ""
+            date = utils.parse_datetime(article.published)
             formatted_date = date.strftime(date_format)
             if generator == 'Medium':
                 match = re.search(r'<img[^>]+src="([^">]+)"', article.content[0]['value'])
                 mainImage = match.group(1)
-            elif hasattr(article, 'media_content'):
+            if hasattr(article, 'media_content'):
                 mainImage = article.media_content[0]['url']
-            elif hasattr(article,'image'):
+            if hasattr(article,'image'):
                 mainImage = article.image['href']
-            elif hasattr(article, 'links'):
+            if hasattr(article, 'links'):
                 for link in article.links:
                     if link.type == "image/jpg":
                         mainImage = link.href
+                    if link.type == 'audio/mpeg':
+                        link = link.href
                     else:
+                        link = article.link
                         continue
             else:
                 continue
         
-            a = Article(article.title, article.link, mainImage, formatted_date, formatted_date)
+            a = Article(article.title, link, mainImage, formatted_date, formatted_date)
             article_list.append(a)
 
         for item in article_list:
@@ -667,6 +679,13 @@ def categoryProjectTokens():
         return response
     else:
         return ""
+    
+@app.route('/landscape', methods=['GET'])
+def refiLandscape():
+    data = landscape()
+    response = jsonify(data)
+    response.headers.add(access_control_origin_header, access_control_origin_value)
+    return response
 
 @app.route('/news', methods=['GET'])
 def news():
