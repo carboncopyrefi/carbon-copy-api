@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, json
 import feedparser, requests, random, datetime, os, re, utils, markdown
 from flask_cors import CORS
 from feedwerk.atom import AtomFeed
+from urllib.request import urlopen 
 
 app = Flask(__name__)
 CORS(app, resources={r"/response*": {"origins": "*"}})
@@ -22,6 +23,7 @@ baserow_table_company_coverage = "171322"
 baserow_table_company_response = "265286"
 baserow_table_company_fundraising = "306630"
 baserow_table_company_category = "314288"
+baserow_table_company_founder = "171321"
 baserow_table_events = "203056"
 baserow_table_survey_question = "265287"
 
@@ -35,7 +37,7 @@ class TopProject:
         self.logo = logo
 
 class Project:
-    def __init__(self, id, slug, name, description_short, links, sectors, description_long, categories, logo, team, coverage, news, top16, location, protocol, responses,fundraising):
+    def __init__(self, id, slug, name, description_short, links, sectors, description_long, categories, logo, founder, coverage, news, top16, location, protocol, responses,fundraising):
         self.id = id
         self.slug = slug
         self.name = name
@@ -45,7 +47,7 @@ class Project:
         self.description_long = description_long
         self.categories = categories
         self.logo = logo
-        self.team = team
+        self.founder = founder
         self.coverage = coverage
         self.news = news
         self.top16 = top16
@@ -78,55 +80,24 @@ def project_details(slug):
     fundraising_list = []
     
     for entry in fundraising_data['results']:
-        if entry['Project ID'] == "":
+        if entry['Project ID'] is None or len(entry['Project ID']) < 1:
             amount = float(entry["Amount"])
             formatted_amount = '{:,.2f}'.format(amount)
             if entry['Round'] is None:
                 round = ""
             else:
                 round = entry['Round']['value']
-            fundraising_dict = {"type": entry['Type']['value'], "round": round, "amount": formatted_amount, "year": entry["Date"].split('-')[0], "url": entry["Link"]}
-            fundraising_list.append(fundraising_dict)
+            fundraising_dict = {"funding_type": entry['Type']['value'], "round": round, "amount": formatted_amount, "year": entry["Date"].split('-')[0], "url": entry["Link"]}
+            fundraising_list.append(fundraising_dict) 
 
-        elif entry['Project ID']:
-            chain_id = entry['Chain ID']
-            gitcoin_project_id = entry['Project ID']
-
-            query = f"""
-            query MyQuery {{
-            project(
-                chainId: {chain_id}
-                id: "{gitcoin_project_id}"
-            ) {{
-                applications(filter: {{status: {{equalTo: APPROVED}}}}) {{
-                id
-                round {{
-                    id
-                    donationsStartTime
-                    roundMetadata
-                }}
-                status
-                uniqueDonorsCount
-                totalDonationsCount
-                totalAmountDonatedInUsd
-                }}
-            }}
-            }}
-            """
-            graphql_result = utils.execute_graphql_query(query)
-            for app in graphql_result['data']['project']['applications']:
-                formatted_response = {
-                        "year": app['round']['donationsStartTime'].split('-')[0],  # Assuming donationsStartTime is in format YYYY-MM-DD
-                        "round": app['round']['roundMetadata'].get('name', 'N/A'),  # Assuming roundMetadata has a 'name' key
-                        "amount": round(app['totalAmountDonatedInUsd'],2),
-                        "total_contributors": app['totalDonationsCount'],
-                        "unique_contributors": app['uniqueDonorsCount'],
-                        "type": "Gitcoin Grants"
-                }
-                
-                fundraising_list.append(formatted_response)  
-
-    sorted_fundraising_list = sorted(fundraising_list, key=lambda d: d['year'], reverse=True)
+        # Get Giveth data
+        elif entry['Project ID'] is not None and entry['Type']['value'] == "Giveth":          
+            giveth_data = utils.get_giveth_data(entry['Project ID'])                
+            fundraising_list.append(giveth_data)
+        else:
+            pass
+    
+    fundraising_sums = utils.calculate_dict_sums(fundraising_list)
 
     # Get data from Link table
     l_dict = {}
@@ -135,8 +106,36 @@ def project_details(slug):
     links_data = utils.get_baserow_data(baserow_table_company_links, links_params)
 
     for l in links_data['results']:
-        l_dict = {"platform": l['Platform']['value'], "url": l['URL']}
+        platform = l['Platform']['value']
+        icon = utils.contact_icon(platform.lower())
+        l_dict = {"platform": platform, "url": l['URL'], "icon": icon}
         l_list.append(l_dict)
+
+    # Get data from Founder and link tables
+    f_list = []
+    f_dict = {}
+    founder_params = "filter__field_1139228__link_row_has=" + company_id
+    founder_data = utils.get_baserow_data(baserow_table_company_founder, founder_params)
+
+    for f in founder_data['results']:
+        founder_name = f['Name']
+        url = None
+        founder_link_list = []
+
+        if len(f['Links']) > 0:
+            for l in f['Links']:
+                founder_links_table_id = baserow_table_company_links + "/" + str(l['id'])
+                founder_links_data = utils.get_baserow_data(founder_links_table_id, "")
+                url = founder_links_data['URL']
+                platform = utils.contact_icon(founder_links_data['Platform']['value'].lower())
+                founder_link_dict = {"platform": platform, "url": url}
+                founder_link_list.append(founder_link_dict)
+
+        else:
+            pass
+
+        f_dict = {"name": founder_name, "platforms": founder_link_list}
+        f_list.append(f_dict)
 
     # Get data from Category table
     cat_dict = {}
@@ -189,7 +188,7 @@ def project_details(slug):
     sorted_r_list = sorted(r_list, key=lambda d:d['survey'], reverse=True)
 
     # Create project object and return
-    project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], result['Description'], cat_list, result['Logo'], result['Founders'], sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list, sorted_fundraising_list)
+    project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], result['Description'], cat_list, result['Logo'], f_list, sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list, fundraising_sums)
     project_dict = vars(project)
 
     return project_dict
@@ -200,7 +199,7 @@ def top_projects_list():
     data = utils.get_baserow_data(baserow_table_company, params)
 
     for item in data['results']:
-        project = TopProject(item['Name'], item['One-sentence Description'], item['Category'], item['id'], item['Slug'])
+        project = TopProject(item['Name'], item['One-sentence Description'], item['Category'], item['id'], item['Slug'], item['Logo'])
         project_dict = vars(project)
         p_list.append(project_dict)
 
@@ -292,10 +291,10 @@ def category_projects(slug):
         category_news_dict = {"title": item['Headline'], "snippet": item['Snippet'], "date": formatted_time, "link": item['Link'], "company": item['Company']}
         category_news_list.append(category_news_dict)
 
+    # Get fundraising data
     for p in comp_list:
         filter_string += "filter__field_2209789__link_row_contains=" + p + "&"
 
-    # Get fundraising data
     fundraising_params = "filter_type=OR&" + filter_string
     fundraising_data = utils.get_baserow_data(baserow_table_company_fundraising, fundraising_params)
     fundraising_list = [
@@ -304,12 +303,23 @@ def category_projects(slug):
     ]
 
     for f in fundraising_list:
-        if f['Round'] is not None:
-            round = f['Round']['value']
+        if f['Project ID'] is None or len(f['Project ID']) < 1:
+            funding_type = f['Type']['value']
+            fundraising_dict = {
+                "funding_type": funding_type,
+                "amount": f['Amount'],
+                "round": None if f['Round'] is None else f['Round']['value'],
+                "year": f["Date"].split('-')[0],
+                "url": f['Link']
+            }
+            category_fundraising_list.append(fundraising_dict)
+
+        # Get Giveth data
+        if f['Project ID'] is not None and f['Type']['value'] == "Giveth":          
+            giveth_data = utils.get_giveth_data(f['Project ID'])                
+            category_fundraising_list.append(giveth_data)
         else:
-            round = f['Type']['value']
-        fundraising_dict = {"round": round, "amount": f['Amount'], "year": f['Date'].split('-')[0]}
-        category_fundraising_list.append(fundraising_dict)
+            pass
 
     fundraising_sums = utils.calculate_dict_sums(category_fundraising_list)
 
@@ -516,7 +526,19 @@ class Milestone():
         self.due_date_unix = due_date_unix
         self.completed_msg = completed_msg
 
+class Impact():
+    def __init__(self, id, name, metric, unit, date, details, status, type):
+        self.id = id
+        self.name = name
+        self.metric = metric
+        self.unit = unit
+        self.date = date
+        self.details = details 
+        self.status = status
+        self.type = type
+
 def project_content(slug):
+    impact_list = []
     # RSS feed content
     generator = ""   
     params = "?user_field_names=true&filter__field_1248804__equal=" + slug
@@ -589,14 +611,14 @@ def project_content(slug):
         
         token = vars(token)
 
-    # Karma GAP data
+    # Karma GAP milestone data
     if result['Karma slug'] is None or len(result['Karma slug']) < 1:
         sorted_milestone_list = None
     else:
         milestone_list = []
         completed_msg = None
         karma_slug = result['Karma slug']
-        milestone_data = utils.get_karma_gap_data(karma_slug)
+        milestone_data = utils.get_karma_gap_data(karma_slug, "milestones")
 
         for m in milestone_data:
             due_date = datetime.datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
@@ -615,11 +637,57 @@ def project_content(slug):
             milestone_list.append(vars(milestone))
         
         sorted_milestone_list = sorted(milestone_list, key=lambda d: d['due_date_unix'], reverse=True)
+
+        # Get Karma GAP impact data
+        impact_data = utils.get_karma_gap_data(karma_slug, "impacts")
+
+        for impact in impact_data:
+            if datetime.datetime.fromtimestamp(impact['data']['completedAt']).strftime('%Y') != str(datetime.datetime.now().year):
+                pass
+            else:
+                id = impact['id']
+                date = datetime.datetime.fromtimestamp(impact['data']['completedAt']).strftime(date_format)
+                details = markdown.markdown(impact['data']['impact'] + "<br /><br />" + impact['data']['proof'])
+                if len(impact['verified']) < 1:
+                    status = "Unverified"
+                else:
+                    status = "Verified"
+
+                item = Impact(id, impact['data']['work'], None, None, date, details, status, "text")
+                impact_list.append(vars(item))
     
+    # Get Impact data
+    if len(result['Impact Metrics JSON']) == 0:
+        pass
+    else:
+        json_url = result['Impact Metrics JSON'][0]['url']
+        response = urlopen(json_url)
+        data = json.loads(response.read())
+
+        if data['method'] == "POST":
+            post_body_json = json.dumps(data['body'])
+            post_body = json.loads(post_body_json)
+            response = requests.post(data['api'], json=post_body)
+            metric_data = response.json()[data['result_key']][data['result_index']]
+
+            for metric in data['metrics']:
+                metric_date = utils.parse_datetime(metric_data[data['date_key']])
+                formatted_metric_date = metric_date.strftime(date_format)
+                if metric['type'] == "numeric":
+                    value = metric_data[metric['key']]
+                    formatted_value = round(float(value) / data['global_denominator'], 2) if data['global_operator'] == "divide" else round(float(value), 2)
+                    if metric['operator'] == "multiply":
+                        formatted_value = round(formatted_value * metric['denominator'], 2)
+                    if metric['operator'] == "divide":
+                        formatted_value = round(formatted_value / metric['denominator'], 2)
+
+                    impact_list.append(vars(Impact(None, metric['name'], '{:,.2f}'.format(formatted_value), metric['unit'], formatted_metric_date, None, None, metric['type'])))
+
     content = {
             'feed': content_list,
             'token': token,
-            'milestones': sorted_milestone_list
+            'milestones': sorted_milestone_list,
+            'impact': impact_list
             }
 
     return content

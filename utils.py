@@ -6,8 +6,6 @@ from datetime import datetime
 baserow_api = "https://api.baserow.io/api/database/rows/table/"
 baserow_token = 'Token RPlLXKDgBX8TscVGjKjI33djLk89X1qf'
 
-gitcoin_graphql = "https://grants-stack-indexer-v2.gitcoin.co/graphql"
-
 def get_baserow_data(table_id, params):
     url = baserow_api + table_id + "/?user_field_names=true&" + params
     headers = {
@@ -40,43 +38,63 @@ def get_coingeckoterminal_data(network, token_id):
     else:
         raise Exception(f"Failed to fetch Coingecko Terminal data with status {response.status_code}. {response.text}")
 
-def get_karma_gap_data(karma_slug):
+def get_karma_gap_data(karma_slug, entity):
 
-    api = "https://gapapi.karmahq.xyz/projects/" + karma_slug + "/milestones"
+    api = "https://gapapi.karmahq.xyz/projects/" + karma_slug + "/" + entity
     response = requests.get(api)
     if response.status_code == 200:
         return response.json()
     else:
         raise Exception(f"Failed to fetch Karma GAP data with status {response.status_code}. {response.text}")
 
-def execute_graphql_query(query):
-    response = requests.post(gitcoin_graphql, json={'query': query})
+def get_giveth_data(slug):
+    query = f"""
+        query {{
+            projectBySlug(slug:"{ slug }") {{
+            totalDonations
+            }}
+        }}
+        """
+    api = "https://mainnet.serve.giveth.io/graphql"
+    response = requests.post(api, json={'query': query})
+
     if response.status_code == 200:
-        return response.json()
+        result = response.json()
+        total_donations = float(result['data']['projectBySlug']['totalDonations'])
+        formatted_total_donations = '{:,.2f}'.format(total_donations)
+        formatted_response = {
+            "round": "Cumulative",
+            "amount": formatted_total_donations,
+            "funding_type": "Giveth",
+            "url": "https://giveth.io/project/" + slug,
+            "year": None,
+        }
+        return formatted_response
     else:
         raise Exception(f"Query failed to run with a {response.status_code}. {response.text}")
     
 def calculate_dict_sums(data):
-    year_round_sums = defaultdict(float)
+    amounts_by_type = defaultdict(lambda: {'total_amount': 0, 'details': []})
 
     for entry in data:
-        key = (entry['year'], entry['round'])
-        year_round_sums[key] += float(entry['amount'])
-        
-    year_round_sums = dict(year_round_sums)
+        funding_type = entry["funding_type"]
+        amount = float(entry["amount"].replace(',', ''))
+        amounts_by_type[funding_type]['total_amount'] += amount
+        amounts_by_type[funding_type]['details'].append(entry)
 
-    json_compatible_sums = [
-        {"round": f"{year} {round}", "amount": '{:,.2f}'.format(amount)} for (year, round), amount in year_round_sums.items()
-    ]
+    for funding_type in amounts_by_type:
+        amounts_by_type[funding_type]['details'].sort(key=lambda x: (x['year'] is None, x['year']), reverse=True)
 
-    json_compatible_sums.sort(key=lambda x: x["round"], reverse=True)
+    grouped_data = [{"funding_type": funding_type, "amount": '{:,.2f}'.format(info['total_amount']), "details": info['details']}
+                for funding_type, info in amounts_by_type.items()]
 
-    return json_compatible_sums
+    return grouped_data
 
 def parse_datetime(datetime_str):
     formats = [
         "%a, %d %b %Y %H:%M:%S %Z",
-        "%a, %d %b %Y %H:%M:%S %z"
+        "%a, %d %b %Y %H:%M:%S %z",
+        "%Y-%m-%d"
     ]
 
     for fmt in formats:
@@ -86,3 +104,27 @@ def parse_datetime(datetime_str):
             continue
 
     raise ValueError(f"Time data '{datetime_str}' does not match any format")
+
+def contact_icon(contact):
+    icons = {
+        "website": "globe",
+        "x": "twitter-x",
+        "facebook": "facebook",
+        "linkedin": "linkedin",
+        "medium": "medium",
+        "instagram": "instagram",
+        "tiktok": "tiktok",
+        "discord": "discord",
+        "github": "github",
+        "whitepaper": "file-text-fill",
+        "blog": "pencil-square",
+        "podcast": "broadcast-pin",
+        "telegram": "telegram",
+        "youtube": "youtube",
+        "dao": "bounding-box-circles",
+    }
+    
+    if contact in icons.keys():
+        icon = icons[contact]
+    
+    return icon

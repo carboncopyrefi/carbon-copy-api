@@ -1,0 +1,28 @@
+{
+    "api": "https://openapi.arkreen.com/v1",
+    "method": "POST",
+    "body": {"jsonrpc":"2.0","id":9487234597228504,"method":"net_statDeviceDailyAll","params":{}},
+    "result_key": "result",
+    "result_index": 0,
+    "date_key": "dataDate",
+    "global_denominator": 1e9,
+    "global_operator": "divide",
+    "metrics": [
+        {
+            "name": "Green Energy Generated",
+            "unit": "MWh",
+            "key": "energyGenerationTotal",
+            "type": "numeric",
+            "denominator": null,
+            "operator": null
+        },
+        {
+            "name": "CO2 Emissions Saved",
+            "unit": "tCO2",
+            "key": "energyGenerationTotal",
+            "type": "numeric",
+            "denominator": 0.709,
+            "operator": "multiply"
+        }
+    ]
+}
