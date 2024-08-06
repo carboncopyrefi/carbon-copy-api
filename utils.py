@@ -38,9 +38,9 @@ def get_coingeckoterminal_data(network, token_id):
     else:
         raise Exception(f"Failed to fetch Coingecko Terminal data with status {response.status_code}. {response.text}")
 
-def get_karma_gap_data(karma_slug, entity):
+def get_karma_gap_data(karma_slug):
 
-    api = "https://gapapi.karmahq.xyz/projects/" + karma_slug + "/" + entity
+    api = "https://gapapi.karmahq.xyz/projects/" + karma_slug
     response = requests.get(api)
     if response.status_code == 200:
         return response.json()

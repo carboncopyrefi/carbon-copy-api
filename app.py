@@ -517,14 +517,15 @@ class Token():
         self.price_usd = price_usd
         self.percent_change = percent_change
 
-class Milestone():
-    def __init__(self, name, description, status, due_date, due_date_unix, completed_msg):
+class Activity():
+    def __init__(self, name, description, status, due_date, due_date_unix, completed_msg, type):
         self.name = name
         self.description = description
         self.status = status
         self.due_date = due_date
         self.due_date_unix = due_date_unix
         self.completed_msg = completed_msg
+        self.type = type
 
 class Impact():
     def __init__(self, id, name, metric, unit, date, details, status, type):
@@ -540,7 +541,7 @@ class Impact():
 def project_content(slug):
     impact_list = []
     # RSS feed content
-    generator = ""   
+    generator = ""  
     params = "?user_field_names=true&filter__field_1248804__equal=" + slug
     data = utils.get_baserow_data(baserow_table_company, params)
     result = data['results'][0]
@@ -551,6 +552,7 @@ def project_content(slug):
         content_feed_url = str(result['Content feed'])
         article_list = []
         content_list = []
+        mainImage = "" 
 
         f = feedparser.parse(content_feed_url)
         if hasattr(f.feed,'generator'): 
@@ -560,7 +562,8 @@ def project_content(slug):
             generator = None
 
         for article in f.entries[0:3]:
-            mainImage = f.feed['image']['href']
+            if hasattr(f.feed, 'image'):
+                mainImage = f.feed['image']['href']
             link = ""
             date = utils.parse_datetime(article.published)
             formatted_date = date.strftime(date_format)
@@ -573,7 +576,7 @@ def project_content(slug):
                 mainImage = article.image['href']
             if hasattr(article, 'links'):
                 for link in article.links:
-                    if link.type == "image/jpg":
+                    if link.type == "image/jpg" or link.type == "image/jpeg":
                         mainImage = link.href
                     if link.type == 'audio/mpeg':
                         link = link.href
@@ -613,33 +616,41 @@ def project_content(slug):
 
     # Karma GAP milestone data
     if result['Karma slug'] is None or len(result['Karma slug']) < 1:
-        sorted_milestone_list = None
+        sorted_activity_list = None
     else:
-        milestone_list = []
+        activity_list = []
         completed_msg = None
         karma_slug = result['Karma slug']
-        milestone_data = utils.get_karma_gap_data(karma_slug, "milestones")
+        karma_data = utils.get_karma_gap_data(karma_slug)
 
-        for m in milestone_data:
-            due_date = datetime.datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
-            description = markdown.markdown(m['data']['description'])
-            if "completed" in m.keys():
-                status = "Completed"
-                completed_msg = markdown.markdown(m['completed']['data']['reason'])
-            elif datetime.datetime.fromtimestamp(m['data']['endsAt']) > datetime.datetime.now():
-                status = "In Progress"
-            elif datetime.datetime.fromtimestamp(m['data']['endsAt']) < datetime.datetime.now():
-                status = "Overdue"
-            else:
-                status = "In Progress"
+        for grant in karma_data['grants']:
+            for m in grant['milestones']:
+                due_date = datetime.datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
+                description = markdown.markdown(m['data']['description'])
+                if "completed" in m.keys():
+                    status = "Completed"
+                    completed_msg = markdown.markdown(m['completed']['data']['reason'])
+                elif datetime.datetime.fromtimestamp(m['data']['endsAt']) > datetime.datetime.now():
+                    status = "In Progress"
+                elif datetime.datetime.fromtimestamp(m['data']['endsAt']) < datetime.datetime.now():
+                    status = "Overdue"
+                else:
+                    status = "In Progress"
 
-            milestone = Milestone(m['data']['title'], description, status, due_date, m['data']['endsAt'], completed_msg)
-            milestone_list.append(vars(milestone))
+                milestone = Activity(m['data']['title'], description, status, due_date, m['data']['endsAt'], completed_msg, "Milestone")
+                activity_list.append(vars(milestone))
         
-        sorted_milestone_list = sorted(milestone_list, key=lambda d: d['due_date_unix'], reverse=True)
+        for update in karma_data['updates']:
+            description = markdown.markdown(update['data']['text'])
+            due_date_string = datetime.datetime.strptime(update['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
+            due_date_unix = datetime.datetime.timestamp(due_date_string)          
+            update = Activity(update['data']['title'], description, None, None, due_date_unix, None, "Update")
+            activity_list.append(vars(update))
+
+        sorted_activity_list = sorted(activity_list, key=lambda d: d['due_date_unix'], reverse=True)
 
         # Get Karma GAP impact data
-        impact_data = utils.get_karma_gap_data(karma_slug, "impacts")
+        impact_data = karma_data['impacts']
 
         for impact in impact_data:
             if datetime.datetime.fromtimestamp(impact['data']['completedAt']).strftime('%Y') != str(datetime.datetime.now().year):
@@ -686,7 +697,7 @@ def project_content(slug):
     content = {
             'feed': content_list,
             'token': token,
-            'milestones': sorted_milestone_list,
+            'activity': sorted_activity_list,
             'impact': impact_list
             }
 
