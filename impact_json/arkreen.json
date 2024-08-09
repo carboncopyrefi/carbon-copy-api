@@ -14,7 +14,8 @@
             "key": "energyGenerationTotal",
             "type": "numeric",
             "denominator": null,
-            "operator": null
+            "operator": null,
+            "format": "{:,.2f}"
         },
         {
             "name": "CO2 Emissions Saved",
@@ -22,7 +23,8 @@
             "key": "energyGenerationTotal",
             "type": "numeric",
             "denominator": 0.709,
-            "operator": "multiply"
+            "operator": "multiply",
+            "format": "{:,.2f}"
         }
     ]
 }

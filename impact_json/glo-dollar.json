@@ -1,0 +1,30 @@
+{
+    "api": "https://app.glodollar.org/api/",
+    "method": "GET",
+    "body": "",
+    "result_key": "",
+    "result_index": "",
+    "date_key": "",
+    "global_denominator": "",
+    "global_operator": "",
+    "metrics": [
+        {
+            "name": "USDGLO Supply",
+            "unit": "",
+            "key": "total-supply",
+            "type": "numeric",
+            "denominator": null,
+            "operator": null,
+            "format": "{:,}"
+        },
+        {
+            "name": "USDGLO Holders",
+            "unit": "",
+            "key": "total-holders",
+            "type": "numeric",
+            "denominator": "",
+            "operator": "",
+            "format": "{:,}"
+        }
+    ]
+}

@@ -1,8 +1,18 @@
 from flask import Flask, jsonify, request, json
-import feedparser, requests, random, datetime, os, re, utils, markdown
+import feedparser, requests, random, datetime, os, re, utils, markdown, keys
 from flask_cors import CORS
 from feedwerk.atom import AtomFeed
 from urllib.request import urlopen 
+from farcaster import Warpcast
+from dotenv import load_dotenv
+from dune_client.client import DuneClient
+
+# Farcaster initialization
+load_dotenv()
+client = Warpcast(mnemonic=keys.WARPCAST_KEY)
+
+# Dune initialization
+dune = DuneClient(keys.DUNE_KEY)
 
 app = Flask(__name__)
 CORS(app, resources={r"/response*": {"origins": "*"}})
@@ -24,6 +34,7 @@ baserow_table_company_response = "265286"
 baserow_table_company_fundraising = "306630"
 baserow_table_company_category = "314288"
 baserow_table_company_founder = "171321"
+baserow_table_company_impact = "336817"
 baserow_table_events = "203056"
 baserow_table_survey_question = "265287"
 
@@ -379,17 +390,17 @@ class Article:
         self.publication = publication
         self.date = date
 
-def nasa():
-    nasa_feed = "https://climate.nasa.gov/news/rss.xml"
-    nasa_list = []
+def eco_watch():
+    eco_watch_feed = "https://www.ecowatch.com/rss"
+    eco_watch_list = []
 
-    f = feedparser.parse(nasa_feed)
+    f = feedparser.parse(eco_watch_feed)
 
     for article in f.entries[0:4]:
-        a = Article(article.title, article.link, "https://carboncopy.news/images/nasa_logo.png", "NASA", article.published)
-        nasa_list.append(a)
+        a = Article(article.title, article.link, f.channel['image']['href'], "EcoWatch", article.published)
+        eco_watch_list.append(a)
 
-    return nasa_list
+    return eco_watch_list
 
 def coindesk():
     cd_feed = "https://www.coindesk.com/arc/outboundfeeds/rss/"
@@ -423,7 +434,7 @@ def sciencedaily():
     return sc_list
 
 def feed():
-    na = nasa()
+    na = eco_watch()
     cd = coindesk()
     sd = sciencedaily()
 
@@ -545,6 +556,7 @@ def project_content(slug):
     params = "?user_field_names=true&filter__field_1248804__equal=" + slug
     data = utils.get_baserow_data(baserow_table_company, params)
     result = data['results'][0]
+    company_id = str(result['id'])
 
     if result['Content feed'] == "":
         content_list = None        
@@ -667,7 +679,7 @@ def project_content(slug):
                 item = Impact(id, impact['data']['work'], None, None, date, details, status, "text")
                 impact_list.append(vars(item))
     
-    # Get Impact data
+    # Get Impact JSON data
     if len(result['Impact Metrics JSON']) == 0:
         pass
     else:
@@ -692,7 +704,20 @@ def project_content(slug):
                     if metric['operator'] == "divide":
                         formatted_value = round(formatted_value / metric['denominator'], 2)
 
-                    impact_list.append(vars(Impact(None, metric['name'], '{:,.2f}'.format(formatted_value), metric['unit'], formatted_metric_date, None, None, metric['type'])))
+                    impact_list.append(vars(Impact(None, metric['name'], metric['format'].format(formatted_value), metric['unit'], formatted_metric_date, None, None, metric['type'])))
+
+        elif data['method'] == "GET":
+            for metric in data['metrics']:
+                api = data['api'] + metric['key']
+                response = requests.get(api)
+                impact_list.append(vars(Impact(None, metric['name'], metric['format'].format(response.json()), metric['unit'], datetime.datetime.now().strftime(date_format), None, None, metric['type'])))
+
+    # Get Company Impact table data
+    company_impact_params = "filter__field_2480014__link_row_has=" + company_id
+    company_impact_data = utils.get_baserow_data(baserow_table_company_impact, company_impact_params)
+    
+    for metric in company_impact_data['results']:
+        impact_list.append(vars(Impact(None, metric['Name'], '{:,.2f}'.format(float(metric['Metric'])), metric['Unit'], datetime.datetime.now().strftime(date_format), None, None, "numeric")))
 
     content = {
             'feed': content_list,
@@ -766,6 +791,40 @@ def refiLandscape():
     response.headers.add(access_control_origin_header, access_control_origin_value)
     return response
 
+@app.route('/impact/update', methods=['GET'])
+def updateImpactMetrics():
+    
+    impact_data = utils.get_baserow_data(baserow_table_company_impact, "")
+
+    for metric in impact_data['results']:
+        if metric['Source']['value'] == "Dune":
+            query = dune.get_latest_result(metric['Query ID'], max_age_hours=240)
+            value = float(query.result.rows[0]['_col0']) / 1e18
+
+            try:
+                row = requests.patch(
+                    "https://api.baserow.io/api/database/rows/table/336817/batch/?user_field_names=true",
+                    headers={
+                        'Authorization': 'Token gp4qn547MSjgnoQ5VrA2n37BDtN4B3KR',
+                        'Content-Type': 'application/json'
+                    },
+                    json={
+                        "items": [
+                            {
+                                "id": metric['id'],
+                                "Metric": value
+                            }
+                        ]
+                    }
+                )
+            except:
+                return "Could not update metric", 500
+
+        else:
+            pass
+
+    return "success"
+
 @app.route('/news', methods=['GET'])
 def news():
     data = news_list()
@@ -787,6 +846,27 @@ def events():
     response = jsonify(data)
     response.headers.add(access_control_origin_header, access_control_origin_value)
     return response
+
+@app.route('/cast/news', methods=['POST'])
+def castNews():
+    if request.method == 'POST' and request.data is not None:
+
+        content = json.loads(request.data)
+
+        for item in content['items']:
+            if len(item['Headline']) > 1 and len(item['Snippet']) > 1 and len(item['Link']) > 1 and item['Display'] is True:
+                cast_body = item['Headline'] + "\n\n" + item['Snippet']
+                embed = item['Link']
+
+                response = client.post_cast(cast_body, [embed], None, "refi")
+
+                return response.cast.hash
+            else:
+                
+                return "Ignore", 200
+    else:
+        return "Error", 403
+
 
 @app.route('/questions', methods=['GET'])
 def questions():
