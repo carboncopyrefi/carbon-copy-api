@@ -553,7 +553,7 @@ def project_content(slug):
     impact_list = []
     # RSS feed content
     generator = ""  
-    params = "?user_field_names=true&filter__field_1248804__equal=" + slug
+    params = "filter__field_1248804__equal=" + slug
     data = utils.get_baserow_data(baserow_table_company, params)
     result = data['results'][0]
     company_id = str(result['id'])
@@ -678,46 +678,13 @@ def project_content(slug):
 
                 item = Impact(id, impact['data']['work'], None, None, date, details, status, "text")
                 impact_list.append(vars(item))
-    
-    # Get Impact JSON data
-    if len(result['Impact Metrics JSON']) == 0:
-        pass
-    else:
-        json_url = result['Impact Metrics JSON'][0]['url']
-        response = urlopen(json_url)
-        data = json.loads(response.read())
-
-        if data['method'] == "POST":
-            post_body_json = json.dumps(data['body'])
-            post_body = json.loads(post_body_json)
-            response = requests.post(data['api'], json=post_body)
-            metric_data = response.json()[data['result_key']][data['result_index']]
-
-            for metric in data['metrics']:
-                metric_date = utils.parse_datetime(metric_data[data['date_key']])
-                formatted_metric_date = metric_date.strftime(date_format)
-                if metric['type'] == "numeric":
-                    value = metric_data[metric['key']]
-                    formatted_value = round(float(value) / data['global_denominator'], 2) if data['global_operator'] == "divide" else round(float(value), 2)
-                    if metric['operator'] == "multiply":
-                        formatted_value = round(formatted_value * metric['denominator'], 2)
-                    if metric['operator'] == "divide":
-                        formatted_value = round(formatted_value / metric['denominator'], 2)
-
-                    impact_list.append(vars(Impact(None, metric['name'], metric['format'].format(formatted_value), metric['unit'], formatted_metric_date, None, None, metric['type'])))
-
-        elif data['method'] == "GET":
-            for metric in data['metrics']:
-                api = data['api'] + metric['key']
-                response = requests.get(api)
-                impact_list.append(vars(Impact(None, metric['name'], metric['format'].format(response.json()), metric['unit'], datetime.datetime.now().strftime(date_format), None, None, metric['type'])))
 
     # Get Company Impact table data
     company_impact_params = "filter__field_2480014__link_row_has=" + company_id
     company_impact_data = utils.get_baserow_data(baserow_table_company_impact, company_impact_params)
     
     for metric in company_impact_data['results']:
-        impact_list.append(vars(Impact(None, metric['Name'], '{:,.2f}'.format(float(metric['Metric'])), metric['Unit'], datetime.datetime.now().strftime(date_format), None, None, "numeric")))
+        impact_list.append(vars(Impact(None, metric['Name'], metric['Metric Format']['value'].format(float(metric['Metric'])), metric['Unit'], datetime.datetime.now().strftime(date_format), None, None, "numeric")))
 
     content = {
             'feed': content_list,
@@ -793,35 +760,71 @@ def refiLandscape():
 
 @app.route('/impact/update', methods=['GET'])
 def updateImpactMetrics():
-    
-    impact_data = utils.get_baserow_data(baserow_table_company_impact, "")
+    update_list = []
+    params = params = "filter__field_2405062__not_empty&include=Impact Metrics JSON"
+    impact_data = utils.get_baserow_data(baserow_table_company, params)
 
-    for metric in impact_data['results']:
-        if metric['Source']['value'] == "Dune":
-            query = dune.get_latest_result(metric['Query ID'], max_age_hours=240)
-            value = float(query.result.rows[0]['_col0']) / 1e18
+    for json_file in impact_data['results']:
+        json_url = json_file['Impact Metrics JSON'][0]['url']
+        response = urlopen(json_url)
+        data = json.loads(response.read())
 
-            try:
-                row = requests.patch(
-                    "https://api.baserow.io/api/database/rows/table/336817/batch/?user_field_names=true",
-                    headers={
-                        'Authorization': 'Token gp4qn547MSjgnoQ5VrA2n37BDtN4B3KR',
-                        'Content-Type': 'application/json'
-                    },
-                    json={
-                        "items": [
-                            {
-                                "id": metric['id'],
-                                "Metric": value
-                            }
-                        ]
-                    }
-                )
-            except:
-                return "Could not update metric", 500
+        for impact in data['impact_data']:
+            if impact['source'] == "dune":
+                for metric in impact['metrics']:
+                    query = dune.get_latest_result(metric['query'], max_age_hours=int(metric['max_age']))
+                    value = float(query.result.rows[int(metric['result_index'])][metric['result_key']])
+                    if metric['denominator'] is not None:
+                        value = value / int(metric['denominator'])
+                    
+                    update_list.append({"id": metric['db_id'], "Metric": value})
+                    
+            if impact['source'] == "client":
+                if impact['method'] == "POST":
+                    post_body_json = json.dumps(impact['body'])
+                    post_body = json.loads(post_body_json)
+                    response = requests.post(impact['api'], json=post_body)
+                    metric_data = response.json()[impact['result_key']][impact['result_index']]
 
-        else:
-            pass
+                    for metric in impact['metrics']:
+                        value = metric_data[metric['result_key']]
+                        formatted_value = round(float(value) / impact['global_denominator'], 2) if impact['global_operator'] == "divide" else round(float(value), 2)
+                        if metric['operator'] == "multiply":
+                            formatted_value = round(formatted_value * metric['denominator'], 2)
+                        if metric['operator'] == "divide":
+                            formatted_value = round(formatted_value / metric['denominator'], 2)
+
+                        update_list.append({"id": metric['db_id'], "Metric": formatted_value})
+
+                if impact['method'] == "GET":
+                    for metric in impact['metrics']:
+                        api = impact['api'] + metric['query']
+                        response = requests.get(api)
+                        value = response.json()
+                        if metric['denominator'] is not None:
+                            value = response.json() / int(metric['denominator'])
+                        update_list.append({"id": metric['db_id'], "Metric": value})
+                
+                else:
+                    pass
+            
+            else:
+                pass
+
+    try:
+        row = requests.patch(
+            "https://api.baserow.io/api/database/rows/table/336817/batch/?user_field_names=true",
+            headers={
+                'Authorization': 'Token gp4qn547MSjgnoQ5VrA2n37BDtN4B3KR',
+                'Content-Type': 'application/json'
+            },
+            json={
+                "items": update_list
+            }
+        )
+    except:
+        print("Could not update metrics"), 500
+
 
     return "success"
 

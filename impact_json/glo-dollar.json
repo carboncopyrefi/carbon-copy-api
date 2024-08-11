@@ -1,30 +1,50 @@
 {
-    "api": "https://app.glodollar.org/api/",
-    "method": "GET",
-    "body": "",
-    "result_key": "",
-    "result_index": "",
-    "date_key": "",
-    "global_denominator": "",
-    "global_operator": "",
-    "metrics": [
+    "impact_data": [
         {
-            "name": "USDGLO Supply",
-            "unit": "",
-            "key": "total-supply",
-            "type": "numeric",
-            "denominator": null,
-            "operator": null,
-            "format": "{:,}"
+            "source": "dune",
+            "api": null,
+            "method": null,
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 1,
+                    "query": "3976633",
+                    "result_key": "_col0",
+                    "result_index": 0,
+                    "denominator": 1e18,
+                    "operator": null,
+                    "max_age": 240
+                }
+            ]
         },
         {
-            "name": "USDGLO Holders",
-            "unit": "",
-            "key": "total-holders",
-            "type": "numeric",
-            "denominator": "",
-            "operator": "",
-            "format": "{:,}"
+            "source": "client",
+            "api": "https://app.glodollar.org/api/",
+            "method": "GET",
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "date_key": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 6,
+                    "query": "total-supply",
+                    "denominator": null,
+                    "operator": null
+                },
+                {
+                    "db_id": 7,
+                    "query": "total-holders",
+                    "denominator": null,
+                    "operator": null
+                }
+            ]
         }
     ]
 }
