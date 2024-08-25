@@ -25,6 +25,7 @@ baserow_token = 'Token RPlLXKDgBX8TscVGjKjI33djLk89X1qf'
 
 date_format = "%B %d, %Y"
 category = "environment"
+refirecap_rss = "https://paragraph.xyz/api/blogs/rss/@carboncopy"
 
 baserow_table_company = "171320"
 baserow_table_company_news = "173781"
@@ -39,13 +40,14 @@ baserow_table_events = "203056"
 baserow_table_survey_question = "265287"
 
 class TopProject:
-    def __init__(self, name, description, categories, id, slug, logo):
+    def __init__(self, name, description, categories, id, slug, logo, location):
         self.name = name
         self.description = description
         self.categories = categories
         self.id = id
         self.slug = slug
         self.logo = logo
+        self.location = location
 
 class Project:
     def __init__(self, id, slug, name, description_short, links, sectors, description_long, categories, logo, founder, coverage, news, top16, location, protocol, responses,fundraising):
@@ -210,7 +212,7 @@ def top_projects_list():
     data = utils.get_baserow_data(baserow_table_company, params)
 
     for item in data['results']:
-        project = TopProject(item['Name'], item['One-sentence Description'], item['Category'], item['id'], item['Slug'], item['Logo'])
+        project = TopProject(item['Name'], item['One-sentence Description'], item['Category'], item['id'], item['Slug'], item['Logo'], item['Location'])
         project_dict = vars(project)
         p_list.append(project_dict)
 
@@ -219,7 +221,7 @@ def top_projects_list():
 def projects_list():
     p_list = []
     page_size = "200"
-    params = "filter__field_1248804__not_empty&size=" + page_size + "&include=Name,One-sentence Description,Category,id,Slug,Logo"
+    params = "filter__field_1248804__not_empty&size=" + page_size + "&include=Name,One-sentence Description,Category,id,Slug,Logo,Location"
     data = utils.get_baserow_data(baserow_table_company, params)
     projects = data['results']
 
@@ -235,7 +237,7 @@ def projects_list():
         for category in item['Category']:
             c_list.append(category['value'])
 
-        project = TopProject(item['Name'], item['One-sentence Description'], c_list, item['id'], item['Slug'], item['Logo'])
+        project = TopProject(item['Name'], item['One-sentence Description'], c_list, item['id'], item['Slug'], item['Logo'], item['Location'])
         project_dict = vars(project)
         p_list.append(project_dict)
 
@@ -274,8 +276,9 @@ def category_projects(slug):
     params = "filter__field_2275918__link_row_contains=" + name + "&filter__field_1248804__not_empty"
     data = utils.get_baserow_data(baserow_table_company, params)
 
-    table_id = baserow_table_company_category + "/" + str(data['results'][0]['Category'][0]['id'])
-    cat_data = utils.get_baserow_data(table_id, "")
+    cat_params = "filter__field_2275917__equal=" + slug
+    cat_data = utils.get_baserow_data(baserow_table_company_category, cat_params)['results'][0]
+    
     cat_dict = {"name": cat_data['Name'], "slug": cat_data['Slug'], "description": cat_data['Description'], "count": data['count']}    
 
     for p in data["results"]:
@@ -359,6 +362,7 @@ class News:
 
 def news_list():
     news_list = []
+    formatted_time = ""
     start = request.args.get('startDate')
     end = request.args.get('endDate')
 
@@ -373,7 +377,8 @@ def news_list():
     for item in data['results']:
         if item['Display'] is True:
             published_time = datetime.datetime.strptime(item['Created on'], "%Y-%m-%dT%H:%M:%S.%fZ")
-            news = News(item['Headline'], item['Snippet'], item['Company'][0]['value'], item['Link'], published_time)
+            formatted_time = published_time.strftime(date_format)
+            news = News(item['Headline'], item['Snippet'], item['Company'][0]['value'], item['Link'], formatted_time)
             news_dict = vars(news)
             news_list.append(news_dict)
         else:
@@ -390,6 +395,27 @@ class Article:
         self.publication = publication
         self.date = date
 
+def refi_recap():
+    refi_recap_list = []
+
+    f = feedparser.parse(refirecap_rss)
+
+    for article in f.entries:
+        mainImage = ""
+        date = utils.parse_datetime(article.published)
+        formatted_date = date.strftime(date_format)
+        for link in article.links:
+            if link.type == "image/jpg" or link.type == "image/jpeg":
+                mainImage = link.href
+
+        a = Article(article.title, article.link, mainImage, formatted_date, formatted_date)
+        refi_recap_list.append(vars(a))
+        
+        sorted_refi_recap_list = sorted(refi_recap_list, key=lambda d: d['date'], reverse=True)
+
+    return sorted_refi_recap_list
+
+
 def eco_watch():
     eco_watch_feed = "https://www.ecowatch.com/rss"
     eco_watch_list = []
@@ -397,7 +423,7 @@ def eco_watch():
     f = feedparser.parse(eco_watch_feed)
 
     for article in f.entries[0:4]:
-        a = Article(article.title, article.link, f.channel['image']['href'], "EcoWatch", article.published)
+        a = Article(article.title, article.link, "https://carboncopy.news/images/ecowatch.png", "EcoWatch", article.published)
         eco_watch_list.append(a)
 
     return eco_watch_list
@@ -684,7 +710,9 @@ def project_content(slug):
     company_impact_data = utils.get_baserow_data(baserow_table_company_impact, company_impact_params)
     
     for metric in company_impact_data['results']:
-        impact_list.append(vars(Impact(None, metric['Name'], metric['Metric Format']['value'].format(float(metric['Metric'])), metric['Unit'], datetime.datetime.now().strftime(date_format), None, None, "numeric")))
+        metric_date = datetime.datetime.strptime(metric['Last modified'],"%Y-%m-%dT%H:%M:%S.%fZ")
+        formatted_metric_date = metric_date.strftime(date_format)
+        impact_list.append(vars(Impact(None, metric['Name'], metric['Metric Format']['value'].format(float(metric['Metric'])), metric['Unit'], formatted_metric_date, None, None, "numeric")))
 
     content = {
             'feed': content_list,
@@ -700,7 +728,7 @@ def project_content(slug):
 def articles():
     data = feed()
     random.shuffle(data)
-    response = jsonify(data[0:6])
+    response = jsonify(data[0:8])
     response.headers.add(access_control_origin_header, access_control_origin_value)
     return response
 
@@ -773,6 +801,7 @@ def updateImpactMetrics():
             if impact['source'] == "dune":
                 for metric in impact['metrics']:
                     query = dune.get_latest_result(metric['query'], max_age_hours=int(metric['max_age']))
+                    print(query)
                     value = float(query.result.rows[int(metric['result_index'])][metric['result_key']])
                     if metric['denominator'] is not None:
                         value = value / int(metric['denominator'])
@@ -801,6 +830,8 @@ def updateImpactMetrics():
                         api = impact['api'] + metric['query']
                         response = requests.get(api)
                         value = response.json()
+                        if type(value) == dict:
+                            value = value[metric['result_key']]
                         if metric['denominator'] is not None:
                             value = response.json() / int(metric['denominator'])
                         update_list.append({"id": metric['db_id'], "Metric": value})
@@ -836,12 +867,19 @@ def news():
     return response
 
 @app.route('/feed', methods=['GET'])
-def refi_feed():
+def refiFeed():
     data = news_list()
     news_feed = AtomFeed(title='ReFi News', feed_url=request.url, url=request.url_root)
     for item in data:
         news_feed.add(item['title'],item['snippet'],content_type='html',author=item['company'],url=item['link'],updated=item['date'],published=item['date'])
     return news_feed.get_response()
+
+@app.route('/newsletter', methods=['GET'])
+def refiRecap():
+    data = refi_recap()
+    response = jsonify(data)
+    response.headers.add(access_control_origin_header, access_control_origin_value)
+    return response
 
 @app.route('/events', methods=['GET'])
 def events():
