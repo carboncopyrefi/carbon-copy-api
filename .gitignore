@@ -5,3 +5,12 @@ keys.py
 __pycache__/utils.cpython-312.pyc
 __pycache__/keys.cpython-312.pyc
 __pycache__/utils.cpython-312.pyc
+__pycache__/assessment.cpython-312.pyc
+__pycache__/categories.cpython-312.pyc
+__pycache__/config.cpython-312.pyc
+__pycache__/external.cpython-312.pyc
+__pycache__/impact_metrics.cpython-312.pyc
+__pycache__/projects.cpython-312.pyc
+__pycache__/refi_landscape.cpython-312.pyc
+__pycache__/utils.cpython-312.pyc
+*.pyc

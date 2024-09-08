@@ -1,10 +1,16 @@
-import requests
+import requests, keys
 from flask import json
 from collections import defaultdict
 from datetime import datetime
+from farcaster import Warpcast
+from dotenv import load_dotenv
+
+# Farcaster initialization
+load_dotenv()
+client = Warpcast(mnemonic=keys.WARPCAST_KEY)
 
 baserow_api = "https://api.baserow.io/api/database/rows/table/"
-baserow_token = 'Token RPlLXKDgBX8TscVGjKjI33djLk89X1qf'
+baserow_token = keys.BASEROW_TOKEN
 
 def get_baserow_data(table_id, params):
     url = baserow_api + table_id + "/?user_field_names=true&" + params
@@ -21,9 +27,11 @@ def get_baserow_data(table_id, params):
         raise Exception(f"Failed to fetch Baserow data with status {response.status_code}. {response.text}")
     
 def get_coingecko_data(token_ids):
-
+    header = {
+        'x_cg_demo_api_key': keys.COINGECKO_KEY
+    }
     api = "https://api.coingecko.com/api/v3/coins/markets?ids=" + token_ids + "&vs_currency=usd"
-    response = requests.get(api)
+    response = requests.get(api, header)
     if response.status_code == 200:
         return response.json()
     else:
@@ -67,7 +75,8 @@ def get_giveth_data(slug):
             "amount": formatted_total_donations,
             "funding_type": "Giveth",
             "url": "https://giveth.io/project/" + slug,
-            "year": None,
+            "date": None,
+            "year": None
         }
         return formatted_response
     else:
@@ -83,7 +92,7 @@ def calculate_dict_sums(data):
         amounts_by_type[funding_type]['details'].append(entry)
 
     for funding_type in amounts_by_type:
-        amounts_by_type[funding_type]['details'].sort(key=lambda x: (x['year'] is None, x['year']), reverse=True)
+        amounts_by_type[funding_type]['details'].sort(key=lambda x: (x['date'] is None, x['date']), reverse=True)
 
     grouped_data = [{"funding_type": funding_type, "amount": '{:,.2f}'.format(info['total_amount']), "details": info['details']}
                 for funding_type, info in amounts_by_type.items()]
@@ -94,7 +103,8 @@ def parse_datetime(datetime_str):
     formats = [
         "%a, %d %b %Y %H:%M:%S %Z",
         "%a, %d %b %Y %H:%M:%S %z",
-        "%Y-%m-%d"
+        "%Y-%m-%d",
+        "%B %d, %Y"
     ]
 
     for fmt in formats:
@@ -128,3 +138,22 @@ def contact_icon(contact):
         icon = icons[contact]
     
     return icon
+
+def cast_to_farcaster(content):
+    for item in content['items']:
+        if len(item['Headline']) > 1 and len(item['Snippet']) > 1 and len(item['Link']) > 1 and item['Display'] is True:
+            cast_body = item['Headline'] + "\n\n"
+            embed = item['Link']
+
+            response = client.post_cast(cast_body, [embed], None, "refi")
+
+            return response.cast.hash
+        else:
+            
+            return "Ignore", 200        
+
+def get_formatted_date():
+    date = datetime.now()
+    formatted_date = date.strftime("%Y-%m-%d")
+
+    return formatted_date
