@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, json
-import random, datetime, categories, projects, assessment, refi_landscape, external, utils, impact_metrics, config
+import random, datetime, categories, projects, assessment, refi_landscape, external, utils, impact_metrics, keys, config
 from flask_cors import CORS
 from feedwerk.atom import AtomFeed 
 
@@ -141,7 +141,7 @@ def questions():
 
 @app.route('/response', methods=['POST'])
 def response():
-    if request.method == 'POST' and request.headers.get('token') == app.config['TOKEN'] and request.data is not None:
+    if request.method == 'POST' and request.headers.get('token') == keys.SURVEY_ACCESS_TOKEN and request.data is not None:
         data = json.loads(request.data)
         _name = data['name']
         _company = data['company']
@@ -150,7 +150,13 @@ def response():
         _answers = data['picked']
         _questions = data['questions']
 
-        return assessment.save_assessment(data, _name, _company, _survey, _email, _answers, _questions), 200
+        result = assessment.save_assessment(data, _name, _company, _survey, _email, _answers, _questions)
+        print(result)
+
+        if result != "Error":
+            return result, 200
+        else:
+            return result, 500
     
     else:
         return "", 400

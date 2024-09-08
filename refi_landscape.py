@@ -90,7 +90,7 @@ def landscape():
 
     categories_dict = {}
 
-    for project in landscape_list:
+    for project in landscape_list['projects']:
         # Iterate over each category in the project's categories
         for category in project['categories']:
             # If the category is not already in the dictionary, add it with an empty list

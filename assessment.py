@@ -1,4 +1,4 @@
-import utils, requests, os, config
+import utils, requests, os, keys, config
 from flask import current_app as app, json, jsonify
 
 baserow_table_company = config.BASEROW_TABLE_COMPANY
@@ -87,7 +87,7 @@ def save_assessment(data, _name, _company, _survey, _email, _answers, _questions
         file = requests.post(
             'https://api.baserow.io/api/user-files/upload-file/',
             headers={
-                'Authorization': baserow_token
+                'Authorization': keys.BASEROW_TOKEN
             },
             files={
                 'file': open(_file.name, 'rb')
@@ -97,7 +97,7 @@ def save_assessment(data, _name, _company, _survey, _email, _answers, _questions
             row = requests.post(
                 "https://api.baserow.io/api/database/rows/table/265286/?user_field_names=true",
                 headers={
-                    'Authorization': 'Token gp4qn547MSjgnoQ5VrA2n37BDtN4B3KR',
+                    'Authorization': keys.IMPACT_METRICS_BASEROW_TOKEN,
                     'Content-Type': 'application/json'
                 },
                 json={
@@ -117,10 +117,10 @@ def save_assessment(data, _name, _company, _survey, _email, _answers, _questions
                     "Total Score": sum_scores
                 }
             )
-        except:
-            return "", 500
-    except:
-        return "", 500
+        except Exception as e:
+            return "Error"
+    except Exception as e:
+        return "Error"
 
     os.remove(_file.name)
 
@@ -133,4 +133,4 @@ def save_assessment(data, _name, _company, _survey, _email, _answers, _questions
         'answers': questions
         })
 
-    return response, 200
+    return response
