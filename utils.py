@@ -141,8 +141,8 @@ def contact_icon(contact):
 
 def cast_to_farcaster(content):
     for item in content['items']:
-        if len(item['Headline']) > 1 and len(item['Snippet']) > 1 and len(item['Link']) > 1 and item['Display'] is True:
-            cast_body = item['Headline'] + "\n\n"
+        if len(item['Headline']) > 1 and len(item['Link']) > 1 and item['Display'] is True:
+            cast_body = item['Headline']
             embed = item['Link']
 
             response = client.post_cast(cast_body, [embed], None, "refi")

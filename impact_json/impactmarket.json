@@ -1,0 +1,30 @@
+{
+    "impact_data": [
+        {
+            "source": "client",
+            "api": "https://www.impactmarket.com/_next/data/qWu9g0peXpIhn0rOqzKdc/en-US/global-dashboard.json",
+            "method": "GET",
+            "body": null,
+            "result_key": "pageProps.data.dataFromApi.general",
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 108,
+                    "result_key": "claimed",
+                    "denominator": null,
+                    "operator": null,
+                    "query": ""
+                },
+                {
+                    "db_id": 109,
+                    "result_key": "beneficiaries",
+                    "denominator": null,
+                    "operator": null,
+                    "query": ""
+                }
+            ]
+        }
+    ]
+}

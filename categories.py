@@ -98,8 +98,12 @@ def category_project_tokens(token_ids):
     token_data = utils.get_coingecko_data(token_ids)
 
     for token in token_data:
+        if token['price_change_percentage_24h'] is None:
+            percent_change = 0
+        else:
+            percent_change = round(token['price_change_percentage_24h'], 2)
         url = coingecko_base_url + token['id']
-        token_dict = {"image": token['image'], "symbol": token['symbol'].upper(), "price_usd": round(token['current_price'],5), "percent_change": round(token['price_change_percentage_24h'],2), "url": url}
+        token_dict = {"image": token['image'], "symbol": token['symbol'].upper(), "price_usd": round(token['current_price'],5), "percent_change": percent_change, "url": url}
         token_list.append(token_dict)
     
     return token_list

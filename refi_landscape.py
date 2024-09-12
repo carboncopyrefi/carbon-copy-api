@@ -45,7 +45,7 @@ def news_list():
 def people_list():
     person_list = []
     page_size = "200"
-    params = "filter_type=OR&filter__field_1139228__not_empty&filter__field_1139487__not_empty&size=" + page_size
+    params = "filter__field_2569042__has_not_empty_value&size=" + page_size
     data = utils.get_baserow_data(baserow_table_company_founder, params)
     people = data['results']
     people_count = data['count']

@@ -63,7 +63,6 @@ def token_list():
     params = "filter__field_2250961__not_empty&filter__field_1248804__not_empty&include=Name,Slug,Token,Logo"
     data = utils.get_baserow_data(baserow_table_company, params)
     tokens = data['results']
-    token_count = data['count']
     
     for token in tokens:
         token_id = token['Token']
@@ -82,13 +81,21 @@ def token_list():
             token_data_list.append(cgt_token_dict)
             
         else:
-            cg_list += token_id + ',' 
-            token_url = coingecko_base_url + token_id
-            token_dict = {'project': token['Name'], 'slug': token['Slug'], 'token_id': token_id, 'logo': token['Logo'], 'url': token_url}
-            token_list.append(token_dict)
+            if re.search(r'^[a-zA-Z0-9,-]+,+[a-zA-Z0-9,-]+$', token_id):
+                tokens = token_id.split(",")
+                for t in tokens:
+                    cg_list += t + ','
+                    token_url = coingecko_base_url + t
+                    token_dict = {'project': token['Name'], 'slug': token['Slug'], 'token_id': t, 'logo': token['Logo'], 'url': token_url}
+                    token_list.append(token_dict)
+            else:
+                cg_list += token_id + ',' 
+                token_url = coingecko_base_url + token_id
+                token_dict = {'project': token['Name'], 'slug': token['Slug'], 'token_id': token_id, 'logo': token['Logo'], 'url': token_url}
+                token_list.append(token_dict)
 
     token_data = utils.get_coingecko_data(cg_list)
-    
+
     # Process data from CoinGecko
 
     for token in token_data:
@@ -109,6 +116,7 @@ def token_list():
             combined_list.append(combined_dict)
 
     sorted_combined_list = sorted(combined_list, key=lambda x:x['project'].lower())
+    token_count = len(token_data_list)
 
     result = {
         "count": token_count,

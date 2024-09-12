@@ -265,6 +265,8 @@ def project_content(slug):
     fundraising_sums = utils.calculate_dict_sums(fundraising_list)
 
     # Token data
+    token_list = []
+
     if result['Token'] is None or len(result['Token']) < 1:
         token = None
     else:
@@ -277,13 +279,18 @@ def project_content(slug):
             token_data = r['data']['attributes']
 
             t = external.Token(token_data['symbol'].upper(), round(float(token_data['price_usd']),5), 0,"")
+            token_list.append(vars(t))
         else:
             r = utils.get_coingecko_data(token_id)
-            token_data = r[0]
 
-            t = external.Token(token_data['symbol'].upper(), round(token_data['current_price'],5), round(token_data['price_change_percentage_24h'],2), token_data['id'])
-        
-        token = vars(t)
+            for token in r:
+                if token['price_change_percentage_24h'] is None:
+                    percent_change = 0
+                else:
+                    percent_change = round(token['price_change_percentage_24h'], 2)
+                    
+                t = external.Token(token['symbol'].upper(), round(token['current_price'],5), percent_change, token['id'])
+                token_list.append(vars(t))
 
     # Karma GAP milestone data
     if result['Karma slug'] is None or len(result['Karma slug']) < 1:
@@ -382,7 +389,7 @@ def project_content(slug):
 
     content = {
             'feed': content_list,
-            'token': token,
+            'token': token_list,
             'activity': sorted_activity_list,
             'impact': impact_list,
             'fundraising': fundraising_sums
