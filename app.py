@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, json
-import random, datetime, categories, projects, assessment, refi_landscape, external, utils, impact_metrics, keys, config
+import random, datetime, categories, projects, assessment, refi_landscape, external, utils, dashboard, keys, config
 from flask_cors import CORS
 from feedwerk.atom import AtomFeed 
 
@@ -63,7 +63,7 @@ def categoryProjectTokens():
 
 @app.route('/dashboard', methods=['GET'])
 def refiDashboard():
-    data = impact_metrics.get_dashboard_data()
+    data = dashboard.get_dashboard_data()
     response = jsonify(data)
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
@@ -88,10 +88,6 @@ def tokenList():
     response = jsonify(data)
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
-
-@app.route('/impact/update', methods=['GET'])
-def updateImpactMetrics():
-    return impact_metrics.update_impact_metrics()
 
 @app.route('/news', methods=['GET'])
 def news():

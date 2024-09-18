@@ -248,10 +248,12 @@ def project_content(slug):
         if entry['Project ID'] is None or len(entry['Project ID']) < 1:
             amount = float(entry["Amount"])
             formatted_amount = '{:,.2f}'.format(amount)
+
             if entry['Round'] is None:
                 fundraising_round = ""
             else:
                 fundraising_round = entry['Round']['value']
+
             fundraising_dict = {"funding_type": entry['Type']['value'], "round": fundraising_round, "amount": formatted_amount, "date": entry["Date"], "year": entry["Date"].split('-')[0], "url": entry["Link"]}
             fundraising_list.append(fundraising_dict) 
 

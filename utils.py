@@ -157,3 +157,11 @@ def get_formatted_date():
     formatted_date = date.strftime("%Y-%m-%d")
 
     return formatted_date
+
+def get_nested_value(data, key_path):
+    keys = key_path.split('.')  # Split the key path string by dots
+    for key in keys:
+        data = data.get(key)  # Access the next level in the nested dict
+        if data is None:  # If the key doesn't exist, return None
+            return None
+    return data

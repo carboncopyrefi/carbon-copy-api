@@ -20,6 +20,32 @@
                     "max_age": 144
                 }
             ]
+        },
+        {
+            "source": "subgraph",
+            "api": "https://gateway.thegraph.com/api/{api_key}/subgraphs/id/",
+            "method": null,
+            "body": null,
+            "result_key": "aggregations",
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 111,
+                    "query": [
+                        "FU5APMSSCqcRy9jy56aXJiGV3PQmFQHg2tzukvSJBgwW",
+                        "AEJ5PEDye6Z198HRQBioG6mZ6ZacHenBg2HTopZPsUCi",
+                        "BWmN569zDopYXp3nzDukJsGDHqRstYAFULFPH8rxyVBk"
+                    ],
+                    "result_key": "totalCarbonBridged",
+                    "result_index": 0,
+                    "graphql": "query { aggregations { key value }}",
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": null
+                }
+            ]
         }
     ]
 }

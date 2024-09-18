@@ -1,5 +1,4 @@
 import utils, re, feedparser, datetime, config
-from flask import current_app as app
 
 baserow_table_company = config.BASEROW_TABLE_COMPANY
 baserow_table_events = config.BASEROW_TABLE_EVENTS
@@ -130,7 +129,7 @@ def refi_recap():
 
     f = feedparser.parse(paragraph_rss)
 
-    for article in f.entries:
+    for article in f.entries[0:3]:
         mainImage = ""
         date = utils.parse_datetime(article.published)
         formatted_date = date.strftime(date_format)

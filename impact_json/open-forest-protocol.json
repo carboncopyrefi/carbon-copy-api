@@ -1,0 +1,26 @@
+{
+    "impact_data": [
+        {
+            "source": "near",
+            "api": "https://rpc.mainnet.near.org",
+            "method": "POST",
+            "body": {"method":"query","params":{"request_type":"call_function","account_id":"occtoken.near","method_name":"mt_tokens","args_base64":"e30=","finality":"optimistic"},"id":130,"jsonrpc":"2.0"},
+            "result_key": "result",
+            "result_index": "result",
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 116,
+                    "query": null,
+                    "result_key": "total_supply",
+                    "result_index": 0,
+                    "denominator": 1e24,
+                    "operator": "divide",
+                    "max_age": null,
+                    "type": "cumulative"
+                }
+            ]
+        }
+    ]
+}
