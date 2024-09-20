@@ -363,7 +363,7 @@ def project_content(slug):
             if metric_name not in latest_metrics or metric_date > utils.parse_datetime(latest_metrics[metric_name]['Date']):
                 latest_metrics[metric_name] = metric
                 formatted_metric_date = metric_date.strftime(date_format)
-                impact_list.append(vars(external.Impact(None, metric_name, metric['Format'][0]['value']['value'].format(float(metric['Value'])), metric['Unit'][0]['value'], formatted_metric_date, None, None, "numeric")))
+                impact_list.append(vars(external.Impact(metric['id'], metric_name, metric['Format'][0]['value']['value'].format(float(metric['Value'])), metric['Unit'][0]['value'], formatted_metric_date, metric['Value Note'], None, "numeric")))
 
         elif metric['Type'][0]['value']['value'] == "Single":
             single_data.append(metric)

@@ -1,0 +1,30 @@
+{
+    "impact_data": [
+        {
+            "source": "client",
+            "api": "https://api.beachcollective.io/map/beach-summary/",
+            "method": "GET",
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 122,
+                    "result_key": "west_collected",
+                    "denominator": null,
+                    "operator": null,
+                    "query": ""
+                },
+                {
+                    "db_id": 123,
+                    "result_key": "total_actions",
+                    "denominator": null,
+                    "operator": null,
+                    "query": ""
+                }
+            ]
+        }
+    ]
+}
