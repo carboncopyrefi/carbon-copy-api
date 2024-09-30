@@ -321,7 +321,7 @@ def project_content(slug):
             
             for u in grant['updates']:
                 description = markdown.markdown(u['data']['text'])
-                if hasattr(u['data'], 'proofOfWork'):
+                if 'data' in u and 'proofOfWork' in u['data']:
                     description += "<a href=" + "'" + u['data']['proofOfWork'] + "'" + "target='_blank'>" + u['data']['proofOfWork'] + "</a>"
                 due_date_string = datetime.datetime.strptime(u['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
                 due_date_unix = datetime.datetime.timestamp(due_date_string) 
