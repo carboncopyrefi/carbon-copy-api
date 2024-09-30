@@ -17,6 +17,13 @@
                     "result_key": "total_projects",
                     "denominator": null,
                     "operator": null
+                },
+                {
+                    "db_id": 124,
+                    "query": "",
+                    "result_key": "total_principal",
+                    "denominator": null,
+                    "operator": null
                 }
             ]
         }

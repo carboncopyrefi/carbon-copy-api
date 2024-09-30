@@ -1,6 +1,5 @@
 import utils, datetime, feedparser, external, re, markdown, config
 from collections import defaultdict
-from flask import current_app as app
 
 date_format = config.DATE_FORMAT
 baserow_table_company = config.BASEROW_TABLE_COMPANY
@@ -319,6 +318,16 @@ def project_content(slug):
 
                 milestone = external.Activity(m['data']['title'], description, status, due_date, m['data']['endsAt'], completed_msg, "Milestone")
                 activity_list.append(vars(milestone))
+            
+            for u in grant['updates']:
+                description = markdown.markdown(u['data']['text'])
+                if hasattr(u['data'], 'proofOfWork'):
+                    description += "<a href=" + "'" + u['data']['proofOfWork'] + "'" + "target='_blank'>" + u['data']['proofOfWork'] + "</a>"
+                due_date_string = datetime.datetime.strptime(u['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
+                due_date_unix = datetime.datetime.timestamp(due_date_string) 
+
+                update = external.Activity(u['data']['title'], description, None, None, due_date_unix, None, "Update")
+                activity_list.append(vars(update))
         
         for update in karma_data['updates']:
             description = markdown.markdown(update['data']['text'])
