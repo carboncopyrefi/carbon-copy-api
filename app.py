@@ -147,7 +147,6 @@ def response():
         _questions = data['questions']
 
         result = assessment.save_assessment(data, _name, _company, _survey, _email, _answers, _questions)
-        print(result)
 
         if result != "Error":
             return result, 200
