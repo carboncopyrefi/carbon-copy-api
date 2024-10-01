@@ -77,11 +77,11 @@ for json_file in impact_data['results']:
                         response = requests.get(api)                           
                         value = response.json()
                         if type(value) == dict:
-                            value = value[metric['result_key']]
+                            value = float(value[metric['result_key']])
                         if metric['denominator'] is not None:
-                            value = response.json() / int(metric['denominator'])
+                            value = float(response.json() / int(metric['denominator']))
                     
-                        i = {"Impact Metric": metric_name, "Value": value, "Date": date}
+                        i = {"Impact Metric": metric_name, "Value": round(value, 2), "Date": date}
 
                         metric_list.append(i)
             
@@ -224,18 +224,18 @@ for json_file in impact_data['results']:
         else:
             pass
 
-# try:
-#     row = requests.post(
-#         "https://api.baserow.io/api/database/rows/table/349685/batch/?user_field_names=true",
-#         headers={
-#             'Authorization': keys.IMPACT_METRICS_BASEROW_TOKEN,
-#             'Content-Type': 'application/json'
-#         },
-#         json={
-#             "items": metric_list
-#         }
-#     )
-# except:
-#     print("Could not update metrics")
+try:
+    row = requests.post(
+        "https://api.baserow.io/api/database/rows/table/349685/batch/?user_field_names=true",
+        headers={
+            'Authorization': keys.IMPACT_METRICS_BASEROW_TOKEN,
+            'Content-Type': 'application/json'
+        },
+        json={
+            "items": metric_list
+        }
+    )
+except:
+    print("Could not update metrics")
 
-print(metric_list)
+# print(metric_list)
