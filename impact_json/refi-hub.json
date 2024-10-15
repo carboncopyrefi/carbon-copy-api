@@ -1,0 +1,32 @@
+{
+    "impact_data": [
+        {
+            "source": "client",
+            "api": "https://api.refihub.io/investments?status=5,6",
+            "method": "GET",
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "date_key": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 166,
+                    "query": "",
+                    "list_name": "items",
+                    "result_key": "investedAmount",
+                    "denominator": 1e6,
+                    "operator": "divide"
+                },
+                {
+                    "db_id": 167,
+                    "query": "",
+                    "result_key": "total",
+                    "denominator": null,
+                    "operator": null
+                }
+            ]
+        }
+    ]
+}

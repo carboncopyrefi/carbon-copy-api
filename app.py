@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, json
 import random, datetime, categories, projects, assessment, refi_landscape, external, utils, dashboard, keys, config
 from flask_cors import CORS
-from feedwerk.atom import AtomFeed 
+from feedwerk.atom import AtomFeed
 
 app = Flask(__name__)
 CORS(app, resources={r"/response*": {"origins": "*"}})
@@ -117,6 +117,15 @@ def events():
     response = jsonify(data)
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
+
+@app.route('/impact/feed', methods=['GET'])
+def impactFeed():
+    with open("impact_feed.json", "r") as _file:
+        data = json.load(_file)
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
 
 @app.route('/cast/news', methods=['POST'])
 def castNews():

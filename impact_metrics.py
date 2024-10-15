@@ -13,6 +13,7 @@ dune = DuneClient(keys.DUNE_KEY)
 
 metric_list = []
 params = "filter__field_2405062__not_empty&include=Impact Metrics JSON"
+# params = "filter__field_1248804__equal=refi-hub&include=Slug,Impact Metrics JSON"
 impact_data = utils.get_baserow_data(baserow_table_company, params)
 
 for json_file in impact_data['results']:
@@ -72,19 +73,32 @@ for json_file in impact_data['results']:
                         metric_list.append(i)
                 else:
                     for metric in impact['metrics']:
+                        list_value = 0
                         metric_name = metric['db_id']
                         api = impact['api'] + metric['query']
                         response = requests.get(api)                           
                         value = response.json()
+                        
+                        if type(value) == int:
+                            if metric['denominator'] is not None:
+                                value = float(response.json() / int(metric['denominator']))
+                                
                         if type(value) == dict:
-                            value = float(value[metric['result_key']])
-                        if metric['denominator'] is not None:
-                            value = float(response.json() / int(metric['denominator']))
+                            if 'list_name' in metric:
+                                for i in value[metric['list_name']]:
+                                    list_value += float(i[metric['result_key']])
+
+                                value = list_value
+                            else:
+                                value = float(value[metric['result_key']])
+                            
+                            if metric['denominator'] is not None:
+                                value = value / int(metric['denominator'])
                     
                         i = {"Impact Metric": metric_name, "Value": round(value, 2), "Date": date}
 
                         metric_list.append(i)
-            
+        
             else:
                 pass
         
@@ -106,6 +120,31 @@ for json_file in impact_data['results']:
                 i = {"Impact Metric": metric_name, "Value": cumulative_value, "Date": date}
 
                 metric_list.append(i)
+
+        if impact['source'] == "graphql":
+            date = utils.get_formatted_date()
+            result_list = []
+
+            if impact['query'] is not None and len(impact['query']) > 0:
+                for q in impact['query']:
+                    gql_query = impact['graphql'].replace('{query}', '"' + q + '"')
+                    response = requests.post(impact['api'], json={'query': gql_query})
+
+                    if response.status_code == 200:
+                        result = response.json()['data'][impact['result_key']][impact['result_index']]
+                        result_list.append(result)
+
+                for metric in impact['metrics']:
+                    metric_name = metric['db_id']
+                    cumulative_value = 0
+                    
+                    for r in result_list:
+                        if metric['result_key'] in r:
+                            cumulative_value += float(r[metric['result_key']])
+            
+                    i = {"Impact Metric": metric_name, "Value": cumulative_value, "Date": date}
+
+                    metric_list.append(i)
 
         if impact['source'] == "regen":
             date = date = utils.get_formatted_date()

@@ -1,0 +1,37 @@
+{
+    "impact_data": [
+        {
+            "source": "graphql",
+            "api": "https://blocksync-graphql.ixo.earth/graphql",
+            "method": null,
+            "body": null,
+            "result_key": "getTokensTotalForCollectionAmounts",
+            "result_index": "CARBON",
+            "global_denominator": null,
+            "global_operator": null,
+            "graphql": "query CollectionTokenTotalAmounts { getTokensTotalForCollectionAmounts( did: {query} allEntityRetired: true )}",
+            "query": [
+                        "did:ixo:entity:eb98bb2c92a62557b6c88c6f80e8d258",
+                        "did:ixo:entity:3448d91ccb919450342958bb187f7eee"
+                    ],
+            "metrics": [
+                {
+                    "db_id": 139,
+                    "result_key": "minted",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": null
+                },
+                {
+                    "db_id": 140,
+                    "result_key": "retired",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": null
+                }
+            ]
+        }
+    ]
+}

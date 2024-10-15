@@ -1,0 +1,38 @@
+{
+    "impact_data": [
+        {
+            "source": "client",
+            "api": "https://carbify-registry-backend.vercel.app/api/post/getTotalCount",
+            "method": "GET",
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "date_key": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 136,
+                    "query": "",
+                    "result_key": "totalCO2offset",
+                    "denominator": 1000,
+                    "operator": "divide"
+                },
+                {
+                    "db_id": 137,
+                    "query": "",
+                    "result_key": "totalLandSize",
+                    "denominator": 10000,
+                    "operator": "divide"
+                },
+                {
+                    "db_id": 138,
+                    "query": "",
+                    "result_key": "totalCarbon",
+                    "denominator": 1000,
+                    "operator": "divide"
+                }
+            ]
+        }
+    ]
+}

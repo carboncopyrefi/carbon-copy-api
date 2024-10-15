@@ -1,0 +1,34 @@
+{
+    "impact_data": [
+        {
+            "source": "dune",
+            "api": null,
+            "method": null,
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 134,
+                    "query": "",
+                    "result_key": "total_supply",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 72
+                },
+                {
+                    "db_id": 135,
+                    "query": "",
+                    "result_key": "total_retired",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 72
+                },
+            ]
+        }
+    ]
+}
