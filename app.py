@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, json
-import random, datetime, categories, projects, assessment, refi_landscape, external, utils, dashboard, keys, config
+import random, datetime, categories, projects, assessment, refi_landscape, external, utils, dashboard, keys, config, os
 from flask_cors import CORS
 from feedwerk.atom import AtomFeed
 
@@ -120,7 +120,8 @@ def events():
 
 @app.route('/impact/feed', methods=['GET'])
 def impactFeed():
-    with open("impact_feed.json", "r") as _file:
+    file_path = os.path.join(os.getcwd(), 'api', 'assets', 'impact_feed.json')
+    with open(file_path, "r") as _file:
         data = json.load(_file)
     response = jsonify(data)
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
@@ -161,13 +162,9 @@ def response():
             return result, 200
         else:
             return result, 500
-    
+
     else:
         return "", 400
 
 if __name__ == "__main__":
     app.run()
-
-
-
-
