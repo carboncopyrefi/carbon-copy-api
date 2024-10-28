@@ -11,13 +11,13 @@
             "global_operator": "divide",
             "metrics": [
                 {
-                    "db_id": 8,
+                    "db_id": 5,
                     "result_key": "energyGenerationTotal",
                     "denominator": null,
                     "operator": null
                 },
                 {
-                    "db_id": 9,
+                    "db_id": 6,
                     "result_key": "energyGenerationTotal",
                     "denominator": 0.709,
                     "operator": "multiply"

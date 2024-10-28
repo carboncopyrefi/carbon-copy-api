@@ -11,7 +11,7 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 116,
+                    "db_id": 27,
                     "query": null,
                     "result_key": "total_supply",
                     "result_index": 0,

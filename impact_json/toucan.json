@@ -11,7 +11,7 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 34,
+                    "db_id": 9,
                     "query": "3515532",
                     "result_key": "cum_amount",
                     "result_index": 0,
@@ -32,7 +32,7 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 111,
+                    "db_id": 22,
                     "query": [
                         "FU5APMSSCqcRy9jy56aXJiGV3PQmFQHg2tzukvSJBgwW",
                         "AEJ5PEDye6Z198HRQBioG6mZ6ZacHenBg2HTopZPsUCi",

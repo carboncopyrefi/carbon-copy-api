@@ -11,7 +11,7 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 12,
+                    "db_id": 8,
                     "query": "3988199",
                     "result_key": "smart_meters",
                     "result_index": 0,

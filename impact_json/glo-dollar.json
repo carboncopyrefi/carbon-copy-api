@@ -33,13 +33,13 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 6,
+                    "db_id": 3,
                     "query": "total-supply",
                     "denominator": null,
                     "operator": null
                 },
                 {
-                    "db_id": 7,
+                    "db_id": 4,
                     "query": "total-holders",
                     "denominator": null,
                     "operator": null

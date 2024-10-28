@@ -11,7 +11,7 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 134,
+                    "db_id": 45,
                     "query": "",
                     "result_key": "total_supply",
                     "result_index": 0,
@@ -20,7 +20,7 @@
                     "max_age": 72
                 },
                 {
-                    "db_id": 135,
+                    "db_id": 46,
                     "query": "",
                     "result_key": "total_retired",
                     "result_index": 0,

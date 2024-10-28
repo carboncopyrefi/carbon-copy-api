@@ -11,14 +11,14 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 108,
+                    "db_id": 19,
                     "result_key": "claimed",
                     "denominator": null,
                     "operator": null,
                     "query": ""
                 },
                 {
-                    "db_id": 109,
+                    "db_id": 20,
                     "result_key": "beneficiaries",
                     "denominator": null,
                     "operator": null,

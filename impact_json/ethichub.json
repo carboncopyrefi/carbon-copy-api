@@ -12,14 +12,14 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 11,
+                    "db_id": 7,
                     "query": "",
                     "result_key": "total_projects",
                     "denominator": null,
                     "operator": null
                 },
                 {
-                    "db_id": 124,
+                    "db_id": 35,
                     "query": "",
                     "result_key": "total_principal",
                     "denominator": null,

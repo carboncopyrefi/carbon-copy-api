@@ -1,4 +1,4 @@
-import utils, requests, keys, config, base64, binascii, regen_pb2
+import utils, requests, keys, config, base64, binascii, regen_pb2, db
 from flask import json
 from urllib.request import urlopen
 from dune_client.client import DuneClient
@@ -31,7 +31,7 @@ for json_file in impact_data['results']:
                 if metric['denominator'] is not None:
                     value = value / int(metric['denominator'])
                 
-                i = {"Impact Metric": metric_name, "Value": value, "Date": date}
+                i = db.CompanyImpactData(metric_name, value, date, None)
 
                 metric_list.append(i)
                 
@@ -52,7 +52,7 @@ for json_file in impact_data['results']:
                     if metric['operator'] == "divide":
                         formatted_value = round(formatted_value / metric['denominator'], 2)
 
-                    i = {"Impact Metric": metric_name, "Value": formatted_value, "Date": date}
+                    i = db.CompanyImpactData(metric_name, formatted_value, date, None)
 
                     metric_list.append(i)
 
@@ -68,7 +68,7 @@ for json_file in impact_data['results']:
                         if metric['denominator'] is not None:
                             value = value / int(metric['denominator'])
                     
-                        i = {"Impact Metric": metric_name, "Value": value, "Date": date}
+                        i = db.CompanyImpactData(metric_name, value, date, None)
 
                         metric_list.append(i)
                 else:
@@ -95,7 +95,7 @@ for json_file in impact_data['results']:
                             if metric['denominator'] is not None:
                                 value = value / int(metric['denominator'])
                     
-                        i = {"Impact Metric": metric_name, "Value": round(value, 2), "Date": date}
+                        i = db.CompanyImpactData(metric_name, round(value, 2), date, None)
 
                         metric_list.append(i)
         
@@ -117,7 +117,7 @@ for json_file in impact_data['results']:
                             if r['key'] == metric['result_key']:
                                 cumulative_value += float(r['value'])
         
-                i = {"Impact Metric": metric_name, "Value": cumulative_value, "Date": date}
+                i = db.CompanyImpactData(metric_name, cumulative_value, date, None)
 
                 metric_list.append(i)
 
@@ -142,7 +142,7 @@ for json_file in impact_data['results']:
                         if metric['result_key'] in r:
                             cumulative_value += float(r[metric['result_key']])
             
-                    i = {"Impact Metric": metric_name, "Value": cumulative_value, "Date": date}
+                    i = db.CompanyImpactData(metric_name, cumulative_value, date, None)
 
                     metric_list.append(i)
 
@@ -232,7 +232,7 @@ for json_file in impact_data['results']:
                 if metric['result_key'] == "onchain_issued_amount":
                     value = onchain_issued_amount                
                 
-                i = {"Impact Metric": metric_name, "Value": round(value, 2), "Date": date}
+                i = db.CompanyImpactData(metric_name, round(value, 2), date, None)
                     
                 metric_list.append(i)
 
@@ -257,24 +257,26 @@ for json_file in impact_data['results']:
                     if metric['type'] == "cumulative":
                         cumulative_value += value
 
-            i = {"Impact Metric": metric_name, "Value": round(cumulative_value, 2), "Date": date}
+            i = db.CompanyImpactData(metric_name, round(cumulative_value, 2), date, None)
             metric_list.append(i)
 
         else:
             pass
 
 try:
-    row = requests.post(
-        "https://api.baserow.io/api/database/rows/table/349685/batch/?user_field_names=true",
-        headers={
-            'Authorization': keys.IMPACT_METRICS_BASEROW_TOKEN,
-            'Content-Type': 'application/json'
-        },
-        json={
-            "items": metric_list
-        }
-    )
-except:
-    print("Could not update metrics")
+    db.addImpactData(metric_list)
+    # row = requests.post(
+    #     "https://api.baserow.io/api/database/rows/table/349685/batch/?user_field_names=true",
+    #     headers={
+    #         'Authorization': keys.IMPACT_METRICS_BASEROW_TOKEN,
+    #         'Content-Type': 'application/json'
+    #     },
+    #     json={
+    #         "items": metric_list
+    #     }
+    # )ccc
+except Exception as error:
+    print("Could not update metrics", error)
 
 # print(metric_list)
+

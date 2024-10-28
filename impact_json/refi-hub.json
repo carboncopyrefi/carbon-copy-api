@@ -12,7 +12,7 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 166,
+                    "db_id": 77,
                     "query": "",
                     "list_name": "items",
                     "result_key": "investedAmount",
@@ -20,7 +20,7 @@
                     "operator": "divide"
                 },
                 {
-                    "db_id": 167,
+                    "db_id": 78,
                     "query": "",
                     "result_key": "total",
                     "denominator": null,

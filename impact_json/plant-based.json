@@ -11,7 +11,7 @@
             "global_operator": null,
             "metrics": [
                 {
-                    "db_id": 4,
+                    "db_id": 2,
                     "query": "3977076",
                     "result_key": "cumulative_mints",
                     "result_index": 0,

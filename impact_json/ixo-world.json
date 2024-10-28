@@ -16,7 +16,7 @@
                     ],
             "metrics": [
                 {
-                    "db_id": 139,
+                    "db_id": 50,
                     "result_key": "minted",
                     "result_index": 0,
                     "denominator": null,
@@ -24,7 +24,7 @@
                     "max_age": null
                 },
                 {
-                    "db_id": 140,
+                    "db_id": 51,
                     "result_key": "retired",
                     "result_index": 0,
                     "denominator": null,
