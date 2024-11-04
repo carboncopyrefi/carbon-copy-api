@@ -87,3 +87,12 @@ def getDashboardData():
         data = session.query(CompanyImpactData).join(Metric).filter(Metric.key != None).order_by(desc(CompanyImpactData.date)).all()
         session.close()
     return data
+
+def getProjectImpactData(slug):
+    with sshTunnel() as server:
+        local_port = str(server.local_bind_port)  
+        session = createEngine(local_port)
+
+        data = session.query(CompanyImpactData).join(Metric).filter(Metric.project_slug == slug).order_by(desc(CompanyImpactData.date)).all()
+        session.close()
+    return data

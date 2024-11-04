@@ -1,4 +1,4 @@
-import utils, datetime, feedparser, external, re, markdown, config
+import utils, datetime, feedparser, external, re, markdown, config, db
 from collections import defaultdict
 
 date_format = config.DATE_FORMAT
@@ -357,29 +357,28 @@ def project_content(slug):
                 impact_list.append(vars(item))
 
     # Get Company Impact table data
-    company_impact_params = "filter__field_2601198__has_value_equal=" + company_name + "&order_by=-Date"
-    company_impact_data = utils.get_baserow_data(baserow_table_company_impact_data, company_impact_params)
+    # company_impact_params = "filter__field_2601198__has_value_equal=" + company_name + "&order_by=-Date"
+    # company_impact_data = utils.get_baserow_data(baserow_table_company_impact_data, company_impact_params)
+    company_impact_data = db.getProjectImpactData(slug)
     
     latest_metrics = {}
     single_data = []
     single_grouped_data = defaultdict(list)
 
-    for metric in company_impact_data['results']:
-        if metric['Type'][0]['value']['value'] == "Cumulative":
-            metric_date = datetime.datetime.strptime(metric['Date'],"%Y-%m-%d")
-            metric_name = metric['Name'][0]['value']
+    for item in company_impact_data:
+        if item.metric.type == "Cumulative":
+            metric_name = item.metric.name
 
-            if metric_name not in latest_metrics or metric_date > utils.parse_datetime(latest_metrics[metric_name]['Date']):
-                latest_metrics[metric_name] = metric
-                formatted_metric_date = metric_date.strftime(date_format)
-                impact_list.append(vars(external.Impact(metric['id'], metric_name, metric['Format'][0]['value']['value'].format(float(metric['Value'])), metric['Unit'][0]['value'], formatted_metric_date, metric['Value Note'], None, "numeric")))
+            if metric_name not in latest_metrics or item.date > latest_metrics[metric_name].date:
+                latest_metrics[metric_name] = item
+                formatted_metric_date = item.date.strftime(date_format)
+                impact_list.append(vars(external.Impact(item.id, metric_name, item.metric.format.format(float(item.value)), item.metric.unit, formatted_metric_date, item.note, None, "numeric")))
 
-        elif metric['Type'][0]['value']['value'] == "Single":
-            single_data.append(metric)
+        elif item.metric.type == "Single":
+            single_data.append(item)
     
     for item in single_data:
-        impact_metric_id = item['Impact Metric'][0]['id']
-        single_grouped_data[impact_metric_id].append(item)
+        single_grouped_data[item.metric_id].append(item)
 
     for metric_id, items in single_grouped_data.items():
         metric_value = 0
@@ -388,11 +387,11 @@ def project_content(slug):
         metric_format = None
 
         for item in items:
-            metric_value += float(item['Value'])
+            metric_value += float(item.value)
             if metric_name is None:
-                metric_name = item['Name'][0]['value']
-                metric_unit = item['Unit'][0]['value']
-                metric_format = item['Format'][0]['value']['value']
+                metric_name = item.metric.name
+                metric_unit = item.metric.unit
+                metric_format = item.metric.format
                 metric_date = datetime.datetime.now()
                 formatted_date = metric_date.strftime(date_format)
         
