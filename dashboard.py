@@ -4,6 +4,7 @@ from datetime import datetime
 
 baserow_table_company_impact_data = config.BASEROW_TABLE_COMPANY_IMPACT_DATA
 baserow_table_company = config.BASEROW_TABLE_COMPANY
+baserow_table_company_fundraising = config.BASEROW_TABLE_COMPANY_FUNDRAISING
 date_format = config.DATE_FORMAT
 
 class DashboardMetric():
@@ -25,23 +26,54 @@ def aggregate_latest_cumulative_metric_values(group):
     return {"date": latest_date, "sum": sum(latest_items)}    
 
 def get_dashboard_data():
-    # page_size = "200"
-    # impact_params = "size=" + page_size + "&order_by=-Date"
-    # impact_data = utils.get_baserow_data(baserow_table_company_impact_data, impact_params)
-    # impact_records = impact_data['results']
-
-    # if impact_data['count'] > int(page_size):
-    #     impact_params += "&page=2"
-    #     impact_data = utils.get_baserow_data(baserow_table_company_impact_data, impact_params)
-    #     for impact_data in impact_data['results']:
-    #         impact_records.append(impact_data)
-
-    impact_records = db.getDashboardData()
-
-    grouped_data = defaultdict(list)
-    metric_list = []
-    series_name = None
     chart_list = []
+    metric_list = []
+
+# Fundraising data
+    metric_key = "venture-capital-amount"
+    year_group = defaultdict(list)
+    fundraising_cumulative_value = 0
+    fundraising_project_list = []
+
+    page_size = "200"
+    fundraising_params = "size=" + page_size + "&order_by=-Date&filter__field_2209786__single_select_equal=1686865"
+    fundraising_data = utils.get_baserow_data(baserow_table_company_fundraising, fundraising_params)
+    fundraising_records = fundraising_data['results']
+
+    if fundraising_data['count'] > int(page_size):
+        fundraising_params += "&page=2"
+        fundraising_data = utils.get_baserow_data(baserow_table_company_impact_data, fundraising_params)
+        for fundraising_data in fundraising_data['results']:
+            fundraising_records.append(fundraising_data)
+
+    for item in fundraising_records:
+        if item['Company'][0]['value'] not in fundraising_project_list:
+            fundraising_project_list.append(item['Company'][0]['value'])
+        fundraising_cumulative_value += float(item['Amount'])
+        fundraising_date = datetime.strptime(item['Date'], "%Y-%m-%d")
+        year = fundraising_date.year
+        year_group[year].append(item)
+
+    fundraising_list = []
+
+    for year, items in year_group.items():
+        fundraising_value = 0
+        for i in items:
+            fundraising_value += float(i['Amount']) 
+        
+        fundraising_list.append({"x": year, "y": fundraising_value})
+    
+    chart_list.append({"series": "Venture Funding", "data": fundraising_list, "key": metric_key})
+
+    metric_list.append(vars(DashboardMetric(metric_key, "Venture Funding Received", '{:,.0f}'.format(fundraising_cumulative_value), "USD", None, None, None, fundraising_project_list)))
+
+    metric_list.append(vars(DashboardMetric("venture-capital-deals", "Venture Funding Deals", fundraising_data['count'], "", None, None, None, fundraising_project_list)))
+
+# Impact data
+    impact_records = db.getDashboardData()
+    grouped_data = defaultdict(list)
+    series_name = None
+    
 
     for item in impact_records: 
     # Group all of the data by key

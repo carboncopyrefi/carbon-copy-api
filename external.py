@@ -1,4 +1,4 @@
-import utils, re, feedparser, datetime, config
+import utils, re, feedparser, datetime, config, requests
 
 baserow_table_company = config.BASEROW_TABLE_COMPANY
 baserow_table_events = config.BASEROW_TABLE_EVENTS
@@ -127,7 +127,9 @@ def token_list():
 def refi_recap():
     refi_recap_list = []
 
-    f = feedparser.parse(paragraph_rss)
+    r = requests.get(paragraph_rss)
+
+    f = feedparser.parse(r.text)
 
     for article in f.entries[0:3]:
         mainImage = ""
@@ -139,10 +141,8 @@ def refi_recap():
 
         a = Article(article.title, article.link, mainImage, formatted_date, formatted_date)
         refi_recap_list.append(vars(a))
-        
-        sorted_refi_recap_list = sorted(refi_recap_list, key=lambda d: d['date'], reverse=True)
 
-    return sorted_refi_recap_list
+    return refi_recap_list
 
 def eco_watch():
     eco_watch_feed = "https://www.ecowatch.com/rss"
