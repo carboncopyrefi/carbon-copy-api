@@ -32,14 +32,14 @@ for project in project_list:
                     else:
                         status = "Verified"
 
-                    item = external.Impact(id, i['data']['work'], project['Name'], None, date, details, status, "text")
+                    item = external.Impact(id, i['data']['work'], project['Name'], i['data']['completedAt'], date, details, status, "text")
                     impact_list.append(vars(item))
         else:
             pass
     else:
         raise Exception(f"Failed to fetch Karma GAP data with status {response.status_code}. {response.text}")
 
-sorted_impact_list = sorted(impact_list, key=lambda d:d['date'], reverse=True)
+sorted_impact_list = sorted(impact_list, key=lambda d:d['unit'], reverse=True)
 
 output_file = "impact_feed.json"
 os.remove(output_file)

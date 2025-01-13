@@ -88,24 +88,27 @@ def get_dashboard_data():
         cumulative_value = 0
         date_grouped_data = defaultdict(list)
         project_list = []
+        item_list = []
 
         for i in items:
             if i.metric.project not in project_list:
                 project_list.append(i.metric.project)
 
-        if items[0].metric.type == "Single":
-            for item in sorted(items, key=lambda x: x.date, reverse=True):          
-                metric_value += float(item.value)
+            if i.metric.type == "Single":         
+                metric_value += float(i.value)
                 if metric_name is None:
-                    metric_name = item.metric.name
-                    metric_unit = item.metric.unit
-                    metric_format = item.metric.format
+                    metric_name = i.metric.name
+                    metric_unit = i.metric.unit
+                    metric_format = i.metric.format
                     metric_date = datetime.now()
                     formatted_date = metric_date.strftime(date_format)
 
-        if items[0].metric.type == "Cumulative":
-            latest_value = aggregate_latest_cumulative_metric_values(items)
-            metric_value = latest_value['sum']
+            if i.metric.type == "Cumulative":
+                item_list.append(i)
+
+        if len(item_list) > 0:        
+            latest_value = aggregate_latest_cumulative_metric_values(item_list)
+            metric_value += latest_value['sum']
             metric_date = latest_value['date']
             formatted_date = metric_date.strftime(date_format)
             metric_name = items[0].metric.name

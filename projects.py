@@ -1,5 +1,6 @@
-import utils, datetime, feedparser, external, re, markdown, config, db
+import utils, feedparser, external, re, markdown, config, db, requests
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 date_format = config.DATE_FORMAT
 baserow_table_company = config.BASEROW_TABLE_COMPANY
@@ -93,7 +94,7 @@ def project_details(slug):
     c_list = []
 
     for a in result['Coverage']:
-        published_time = datetime.datetime.strptime(a['Publish Date'], "%Y-%m-%d")
+        published_time = datetime.strptime(a['Publish Date'], "%Y-%m-%d")
         formatted_time = published_time.strftime(date_format)
         c_dict = {"headline": a['Headline'], "publication": a['Publication']['value'], "url": a['Link'], "date": formatted_time, "sort_date": published_time}
         c_list.append(c_dict)
@@ -107,7 +108,7 @@ def project_details(slug):
     news_data = utils.get_baserow_data(baserow_table_company_news, news_params)
 
     for n in news_data['results']:
-        published_time = datetime.datetime.strptime(n['Created on'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        published_time = datetime.strptime(n['Created on'], "%Y-%m-%dT%H:%M:%S.%fZ")
         formatted_time = published_time.strftime(date_format)
         n_dict = {"headline": n['Headline'], "snippet": n['Snippet'], "url": n['Link'], "date": formatted_time, "sort_date": published_time}
         n_list.append(n_dict)
@@ -197,7 +198,12 @@ def project_content(slug):
         content_list = []
         mainImage = "" 
 
-        f = feedparser.parse(content_feed_url)
+        if "paragraph" in content_feed_url:
+            r = requests.get(content_feed_url)
+            f = feedparser.parse(r.text)
+        else:
+            f = feedparser.parse(content_feed_url)
+            
         if hasattr(f.feed,'generator'): 
             if f.feed['generator'] == 'Medium':
                 generator = 'Medium'
@@ -304,14 +310,14 @@ def project_content(slug):
 
         for grant in karma_data['grants']:
             for m in grant['milestones']:
-                due_date = datetime.datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
+                due_date = datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
                 description = markdown.markdown(m['data']['description'])
                 if "completed" in m.keys():
                     status = "Completed"
                     completed_msg = markdown.markdown(m['completed']['data']['reason'])
-                elif datetime.datetime.fromtimestamp(m['data']['endsAt']) > datetime.datetime.now():
+                elif datetime.fromtimestamp(m['data']['endsAt']) > datetime.now():
                     status = "In Progress"
-                elif datetime.datetime.fromtimestamp(m['data']['endsAt']) < datetime.datetime.now():
+                elif datetime.fromtimestamp(m['data']['endsAt']) < datetime.now():
                     status = "Overdue"
                 else:
                     status = "In Progress"
@@ -323,16 +329,16 @@ def project_content(slug):
                 description = markdown.markdown(u['data']['text'])
                 if 'data' in u and 'proofOfWork' in u['data']:
                     description += "<a href=" + "'" + u['data']['proofOfWork'] + "'" + "target='_blank'>" + u['data']['proofOfWork'] + "</a>"
-                due_date_string = datetime.datetime.strptime(u['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
-                due_date_unix = datetime.datetime.timestamp(due_date_string) 
+                due_date_string = datetime.strptime(u['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
+                due_date_unix = datetime.timestamp(due_date_string) 
 
                 update = external.Activity(u['data']['title'], description, None, None, due_date_unix, None, "Update")
                 activity_list.append(vars(update))
         
         for update in karma_data['updates']:
             description = markdown.markdown(update['data']['text'])
-            due_date_string = datetime.datetime.strptime(update['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
-            due_date_unix = datetime.datetime.timestamp(due_date_string)          
+            due_date_string = datetime.strptime(update['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
+            due_date_unix = datetime.timestamp(due_date_string)          
             update = external.Activity(update['data']['title'], description, None, None, due_date_unix, None, "Update")
             activity_list.append(vars(update))
 
@@ -342,11 +348,12 @@ def project_content(slug):
         impact_data = karma_data['impacts']
 
         for impact in impact_data:
-            if datetime.datetime.fromtimestamp(impact['data']['completedAt']).strftime('%Y') != str(datetime.datetime.now().year):
-                pass
-            else:
+            current_timestamp = datetime.now()
+            one_year_ago = current_timestamp - timedelta(days=365)
+
+            if one_year_ago <= datetime.fromtimestamp(impact['data']['completedAt']) <= current_timestamp:
                 id = impact['id']
-                date = datetime.datetime.fromtimestamp(impact['data']['completedAt']).strftime(date_format)
+                date = datetime.fromtimestamp(impact['data']['completedAt']).strftime(date_format)
                 details = markdown.markdown(impact['data']['impact'] + "<br /><br />" + impact['data']['proof'])
                 if len(impact['verified']) < 1:
                     status = "Unverified"
@@ -355,6 +362,9 @@ def project_content(slug):
 
                 item = external.Impact(id, impact['data']['work'], None, None, date, details, status, "text")
                 impact_list.append(vars(item))
+
+            else:
+                pass
 
     # Get Company Impact table data
     # company_impact_params = "filter__field_2601198__has_value_equal=" + company_name + "&order_by=-Date"
@@ -392,7 +402,7 @@ def project_content(slug):
                 metric_name = item.metric.name
                 metric_unit = item.metric.unit
                 metric_format = item.metric.format
-                metric_date = datetime.datetime.now()
+                metric_date = datetime.now()
                 formatted_date = metric_date.strftime(date_format)
         
         impact_list.append(vars(external.Impact(None,metric_name, metric_format.format(metric_value), metric_unit, formatted_date, None, None, "numeric")))
