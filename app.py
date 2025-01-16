@@ -105,6 +105,13 @@ def refiFeed():
     return news_feed.get_response()
 
 @app.route('/newsletter', methods=['GET'])
+def newsletterParagraph():
+    data = external.newsletter()
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
+@app.route('/refirecap', methods=['GET'])
 def refiRecap():
     data = external.refi_recap()
     response = jsonify(data)

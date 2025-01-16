@@ -6,6 +6,7 @@ date_format = config.DATE_FORMAT
 coingecko_base_url = config.COINGECKO_BASE_URL
 paragraph_rss = config.PARAGRAPH_RSS
 news_category_key = config.NEWS_CATEGORY_KEY
+refidao_rss = config.REFIDAO_RSS
 
 class Token():
     def __init__(self, symbol, price_usd, percent_change, token_id):
@@ -127,6 +128,26 @@ def token_list():
 def refi_recap():
     refi_recap_list = []
 
+    r = requests.get(refidao_rss)
+
+    f = feedparser.parse(r.text)
+
+    for article in f.entries[0:3]:
+        if "ReFi Recap" in article.title:
+            mainImage = ""
+            date = utils.parse_datetime(article.published)
+            formatted_date = date.strftime(date_format)
+            for image in article.media_content:
+                mainImage = image['url']
+
+            a = Article(article.title, article.link, mainImage, formatted_date, formatted_date)
+            refi_recap_list.append(vars(a))
+
+    return refi_recap_list
+
+def newsletter():
+    newsletter_list = []
+
     r = requests.get(paragraph_rss)
 
     f = feedparser.parse(r.text)
@@ -140,9 +161,9 @@ def refi_recap():
                 mainImage = link.href
 
         a = Article(article.title, article.link, mainImage, formatted_date, formatted_date)
-        refi_recap_list.append(vars(a))
+        newsletter_list.append(vars(a))
 
-    return refi_recap_list
+    return newsletter_list
 
 def eco_watch():
     eco_watch_feed = "https://www.ecowatch.com/rss"
