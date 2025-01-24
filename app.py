@@ -125,6 +125,13 @@ def events():
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
 
+@app.route('/opportunities', methods=['GET'])
+def opportunities():
+    data = refi_landscape.opportunity_list()
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
 @app.route('/impact/feed', methods=['GET'])
 def impactFeed():
     file_path = os.path.join(os.getcwd(), 'api', 'assets', 'impact_feed.json')

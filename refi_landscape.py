@@ -3,6 +3,8 @@ from flask import current_app as app, request
 
 baserow_table_company_news = config.BASEROW_TABLE_COMPANY_NEWS
 baserow_table_company_founder = config.BASEROW_TABLE_COMPANY_FOUNDER
+baserow_table_company_opportunity = config.BASEROW_TABLE_COMPANY_OPPORTUNITY
+date_format = config.DATE_FORMAT
 
 class Person:
     def __init__(self, name, contacts, projects):
@@ -16,6 +18,33 @@ class News:
         self.company = company
         self.link = link
         self.date = date
+
+class Opportunity:
+    def __init__(self, name, company, company_logo, link, expiry_date):
+        self.name = name
+        self.company = company
+        self.company_logo = company_logo
+        self.link = link
+        self.expiry_date = expiry_date
+
+def opportunity_list():
+    opportunity_list = []
+    formatted_date = ""
+    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    params = "&filter__field_3335752__date_after_or_equal=" + current_date + "&filter_type=OR&filter__field_3335752__empty&order_by=-Expiring on&Company__join=Logo"
+    data = utils.get_baserow_data(baserow_table_company_opportunity, params)
+
+    for item in data['results']:
+        if item['Expiring on'] is None:
+            formatted_date = "Ongoing"
+        else:
+            expiry_date = datetime.datetime.strptime(item['Expiring on'], "%Y-%m-%d")
+            formatted_date = expiry_date.strftime(date_format)
+        opportunity = Opportunity(item['Name'], item['Company'][0]['value'], item['Company'][0]['Logo'], item['Link'], formatted_date)
+        opportunity_list.append(vars(opportunity))
+
+    return opportunity_list
 
 def news_list():
     news_list = []
