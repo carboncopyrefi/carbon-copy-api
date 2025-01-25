@@ -24,7 +24,7 @@ for project in project_list:
                 three_months_ago = current_timestamp - timedelta(days=90)
 
                 if three_months_ago <= datetime.fromtimestamp(i['data']['completedAt']) <= current_timestamp:
-                    id = i['id']
+                    id = i['uid']
                     date = datetime.fromtimestamp(i['data']['completedAt']).strftime(date_format)
                     details = markdown.markdown(i['data']['impact'] + "<br /><br />" + i['data']['proof'])
                     if len(i['verified']) < 1:

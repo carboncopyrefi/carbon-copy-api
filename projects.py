@@ -10,6 +10,7 @@ baserow_table_company_category = config.BASEROW_TABLE_COMPANY_CATEGORY
 baserow_table_company_coverage = config.BASEROW_TABLE_COMPANY_COVERAGE
 baserow_table_company_response = config.BASEROW_TABLE_COMPANY_RESPONSE
 baserow_table_company_news = config.BASEROW_TABLE_COMPANY_NEWS
+baserow_table_company_opportunity = config.BASEROW_TABLE_COMPANY_OPPORTUNITY
 baserow_table_company_fundraising = config.BASEROW_TABLE_COMPANY_FUNDRAISING
 baserow_table_company_impact_data = config.BASEROW_TABLE_COMPANY_IMPACT_DATA
 
@@ -24,14 +25,13 @@ class TopProject:
         self.location = location
 
 class Project:
-    def __init__(self, id, slug, name, description_short, links, sectors, description_long, categories, logo, founder, coverage, news, top16, location, protocol, responses):
+    def __init__(self, id, slug, name, description_short, links, sectors, categories, logo, founder, coverage, news, top16, location, protocol, responses):
         self.id = id
         self.slug = slug
         self.name = name
         self.description_short = description_short
         self.links = links
         self.sectors = sectors
-        self.description_long = description_long
         self.categories = categories
         self.logo = logo
         self.founder = founder
@@ -128,7 +128,7 @@ def project_details(slug):
     sorted_r_list = sorted(r_list, key=lambda d:d['survey'], reverse=True)
 
     # Create project object and return it
-    project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], result['Description'], cat_list, result['Logo'], f_list, sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list)
+    project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], cat_list, result['Logo'], f_list, sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list)
     project_dict = vars(project)
 
     return project_dict
@@ -242,6 +242,25 @@ def project_content(slug):
             item_dict = vars(item)
             content_list.append(item_dict)
 
+    # Opportunities
+    opportunity_list = []
+    formatted_date = ""
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    op_params = "&filter__field_3330931__link_row_has=" + company_id + "&order_by=-Expiring on"
+    op_data = utils.get_baserow_data(baserow_table_company_opportunity, op_params)
+    op_result = op_data['results']
+
+    for op in op_result:
+        if op['Expiring on'] is None:
+            formatted_date = "Ongoing"
+        elif op['Expiring on'] > current_date:
+            expiry_date = datetime.strptime(op['Expiring on'], "%Y-%m-%d")
+            formatted_date = expiry_date.strftime(date_format)
+        else:
+            pass
+        opportunity_dict = {"name": op['Name'], "deadline": formatted_date, "url": op['Link']}
+        opportunity_list.append(opportunity_dict)
+
     # Get data from CompanyFundraising table - take advantage of row link here
     fundraising_params = "filter__field_2209789__link_row_has=" + company_id
     fundraising_data = utils.get_baserow_data(baserow_table_company_fundraising, fundraising_params)
@@ -312,9 +331,9 @@ def project_content(slug):
             for m in grant['milestones']:
                 due_date = datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
                 description = markdown.markdown(m['data']['description'])
-                if "completed" in m.keys():
+                if len(m['completed']) > 0:
                     status = "Completed"
-                    completed_msg = markdown.markdown(m['completed']['data']['reason'])
+                    completed_msg = markdown.markdown(m['completed'][0]['data']['reason'])
                 elif datetime.fromtimestamp(m['data']['endsAt']) > datetime.now():
                     status = "In Progress"
                 elif datetime.fromtimestamp(m['data']['endsAt']) < datetime.now():
@@ -352,7 +371,7 @@ def project_content(slug):
             one_year_ago = current_timestamp - timedelta(days=365)
 
             if one_year_ago <= datetime.fromtimestamp(impact['data']['completedAt']) <= current_timestamp:
-                id = impact['id']
+                id = impact['uid']
                 date = datetime.fromtimestamp(impact['data']['completedAt']).strftime(date_format)
                 details = markdown.markdown(impact['data']['impact'] + "<br /><br />" + impact['data']['proof'])
                 if len(impact['verified']) < 1:
@@ -412,7 +431,8 @@ def project_content(slug):
             'token': token_list,
             'activity': sorted_activity_list,
             'impact': impact_list,
-            'fundraising': fundraising_sums
+            'fundraising': fundraising_sums,
+            'opportunities': opportunity_list
             }
 
     return content
