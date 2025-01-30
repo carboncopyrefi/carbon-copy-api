@@ -132,6 +132,13 @@ def opportunities():
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
 
+@app.route('/knowledge', methods=['GET'])
+def knowledge():
+    data = refi_landscape.knowledge_list()
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
 @app.route('/impact/feed', methods=['GET'])
 def impactFeed():
     file_path = os.path.join(os.getcwd(), 'api', 'assets', 'impact_feed.json')

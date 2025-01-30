@@ -4,6 +4,7 @@ from flask import current_app as app, request
 baserow_table_company_news = config.BASEROW_TABLE_COMPANY_NEWS
 baserow_table_company_founder = config.BASEROW_TABLE_COMPANY_FOUNDER
 baserow_table_company_opportunity = config.BASEROW_TABLE_COMPANY_OPPORTUNITY
+baserow_table_knowledge = config.BASEROW_TABLE_KNOWLEDGE
 date_format = config.DATE_FORMAT
 
 class Person:
@@ -26,6 +27,36 @@ class Opportunity:
         self.company_logo = company_logo
         self.link = link
         self.expiry_date = expiry_date
+
+class Knowledge:
+    def __init__(self, title, link, company, medium, date, topic):
+        self.title = title
+        self.link = link
+        self.company = company
+        self.medium = medium
+        self.date = date
+        self.topic = topic
+
+def knowledge_list():
+    knowledge_list = []
+    params = "order_by=Title&Company__join=Slug"
+    data = utils.get_baserow_data(baserow_table_knowledge, params)
+
+    for item in data['results']:
+        medium_list = []
+        date = datetime.datetime.strptime(item['Date Published'], "%Y-%m-%d")
+        formatted_date = date.strftime(date_format)
+
+        for medium in item['Medium']:
+            icon = utils.medium_icon(medium['value'].lower())
+            medium_dict = { "medium": medium['value'], "icon": icon }
+            medium_list.append(medium_dict)
+            
+        company_dict = { "name": item['Company'][0]['value'], "slug": item['Company'][0]['Slug'] }
+        knowledge = Knowledge(item['Title'], item['Link'], company_dict, medium_list, formatted_date, item['Category'][0]['value'])
+        knowledge_list.append(vars(knowledge))
+    
+    return knowledge_list
 
 def opportunity_list():
     opportunity_list = []

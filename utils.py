@@ -139,6 +139,18 @@ def contact_icon(contact):
     
     return icon
 
+def medium_icon(medium):
+    icons = {
+        "audio": "mic-fill",
+        "video": "camera-video-fill",
+        "text": "file-text-fill",
+    }
+    
+    if medium in icons.keys():
+        icon = icons[medium]
+    
+    return icon
+
 def cast_to_farcaster(content):
     for item in content['items']:
         if len(item['Headline']) > 1 and len(item['Link']) > 1 and item['Display'] is True:
