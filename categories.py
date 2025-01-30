@@ -34,7 +34,7 @@ def category_projects(slug):
 
     for p in data["results"]:
         comp_list.append(p['Name'])
-        p_dict = {"name": p['Name'], "slug": p["Slug"], "short_description": p['One-sentence Description'], "description": p['Description'], "logo": p['Logo'], "location": p['Location'] }
+        p_dict = {"name": p['Name'], "slug": p["Slug"], "short_description": p['One-sentence Description'], "logo": p['Logo'], "location": p['Location'] }
         p_list.append(p_dict)
 
         if p['Token']:
