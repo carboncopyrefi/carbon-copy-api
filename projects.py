@@ -331,9 +331,12 @@ def project_content(slug):
             for m in grant['milestones']:
                 due_date = datetime.fromtimestamp(m['data']['endsAt']).strftime(date_format)
                 description = markdown.markdown(m['data']['description'])
-                if len(m['completed']) > 0:
+                if "completed" in m.keys():
                     status = "Completed"
-                    completed_msg = markdown.markdown(m['completed'][0]['data']['reason'])
+                    if "reason" in m['completed']['data'].keys():
+                        completed_msg = markdown.markdown(m['completed']['data']['reason'])
+                    else:
+                        completed_msg = None
                 elif datetime.fromtimestamp(m['data']['endsAt']) > datetime.now():
                     status = "In Progress"
                 elif datetime.fromtimestamp(m['data']['endsAt']) < datetime.now():

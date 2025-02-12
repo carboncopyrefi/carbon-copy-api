@@ -139,6 +139,20 @@ def knowledge():
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
 
+@app.route('/refi-weekly', methods=['GET'])
+def refiWeekly():
+    data = refi_landscape.refi_weekly()
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
+@app.route('/refi-weekly/<slug>', methods=['GET'])
+def refiWeeklyEpisode(slug):
+    data = refi_landscape.refi_weekly_episode(slug)
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
 @app.route('/impact/feed', methods=['GET'])
 def impactFeed():
     file_path = os.path.join(os.getcwd(), 'api', 'assets', 'impact_feed.json')

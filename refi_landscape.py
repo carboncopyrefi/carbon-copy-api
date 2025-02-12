@@ -5,6 +5,7 @@ baserow_table_company_news = config.BASEROW_TABLE_COMPANY_NEWS
 baserow_table_company_founder = config.BASEROW_TABLE_COMPANY_FOUNDER
 baserow_table_company_opportunity = config.BASEROW_TABLE_COMPANY_OPPORTUNITY
 baserow_table_knowledge = config.BASEROW_TABLE_KNOWLEDGE
+baserow_table_refi_weekly = config.BASEROW_TABLE_REFI_WEEKLY
 date_format = config.DATE_FORMAT
 
 class Person:
@@ -36,6 +37,16 @@ class Knowledge:
         self.medium = medium
         self.date = date
         self.topic = topic
+
+class ReFiWeeklyEpisode:
+    def __init__(self, id, title, subtitle, summary, slug, date, link):
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.summary = summary
+        self.slug = slug
+        self.date = date
+        self.link = link
 
 def knowledge_list():
     knowledge_list = []
@@ -76,6 +87,36 @@ def opportunity_list():
         opportunity_list.append(vars(opportunity))
 
     return opportunity_list
+
+def refi_weekly():
+    episode_list = []
+    params = "order_by=-Date produced"
+    data = utils.get_baserow_data(baserow_table_refi_weekly, params)
+
+    for episode in data['results']:
+        date = datetime.datetime.strptime(episode['Date produced'], "%Y-%m-%d")
+        formatted_date = date.strftime(date_format)
+        summary = episode['Summary'].split("```")[1]
+        subtitle = episode['Subtitle']
+        episode = ReFiWeeklyEpisode(episode['id'], episode['Title'], subtitle, summary, episode['Slug'], formatted_date, episode['Link'])
+        episode_list.append(vars(episode))
+    
+    return episode_list
+
+def refi_weekly_episode(slug):
+    params = "filter__field_3466508__=" + slug
+    data = utils.get_baserow_data(baserow_table_refi_weekly, params)
+
+    for episode in data['results']:
+        date = datetime.datetime.strptime(episode['Date produced'], "%Y-%m-%d")
+        formatted_date = date.strftime(date_format)
+        summary = episode['Summary'].split("```")[1]
+        subtitle = episode['Subtitle']
+        episode = ReFiWeeklyEpisode(episode['id'], episode['Title'], subtitle, summary, episode['Slug'], formatted_date, episode['Link'])
+        episode_details = vars(episode)
+    
+    
+    return episode_details
 
 def news_list():
     news_list = []
