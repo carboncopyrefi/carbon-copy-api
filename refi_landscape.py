@@ -90,7 +90,7 @@ def opportunity_list():
 
 def refi_weekly():
     episode_list = []
-    params = "order_by=-Date produced"
+    params = "filter__field_3459519__not_empty&order_by=-Date produced"
     data = utils.get_baserow_data(baserow_table_refi_weekly, params)
 
     for episode in data['results']:

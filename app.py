@@ -15,6 +15,13 @@ def articles():
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
 
+@app.route('/articles/partner', methods=['GET'])
+def partnerArticles():
+    data = external.carbon_advisor()
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
 @app.route('/projects/<slug>', methods=['GET'])
 def projectDetails(slug):
     data = projects.project_details(slug)

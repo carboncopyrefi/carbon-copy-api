@@ -7,6 +7,7 @@ coingecko_base_url = config.COINGECKO_BASE_URL
 paragraph_rss = config.PARAGRAPH_RSS
 news_category_key = config.NEWS_CATEGORY_KEY
 refidao_rss = config.REFIDAO_RSS
+carbon_advisor_rss = config.CARBON_ADVISOR_RSS
 
 class Token():
     def __init__(self, symbol, price_usd, percent_change, token_id):
@@ -164,6 +165,21 @@ def newsletter():
         newsletter_list.append(vars(a))
 
     return newsletter_list
+
+def carbon_advisor():
+    carbon_advisor_list = []
+
+    f = feedparser.parse(carbon_advisor_rss)
+
+    for article in f.entries[0:4]:
+        date = utils.parse_datetime(article.published)
+        formatted_date = date.strftime(date_format)
+        match = re.search(r'<img[^>]+src="([^">]+)"', article.description)
+        mainImage = match.group(1)
+        a = Article(article.title, article.link, mainImage, "Carbon Advisor", formatted_date)
+        carbon_advisor_list.append(vars(a))
+
+    return carbon_advisor_list
 
 def eco_watch():
     eco_watch_feed = "https://www.ecowatch.com/rss"
