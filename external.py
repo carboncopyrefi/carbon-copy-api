@@ -133,7 +133,7 @@ def refi_recap():
 
     f = feedparser.parse(r.text)
 
-    for article in f.entries[0:3]:
+    for article in f.entries:
         if "ReFi Recap" in article.title:
             mainImage = ""
             date = utils.parse_datetime(article.published)
@@ -144,7 +144,7 @@ def refi_recap():
             a = Article(article.title, article.link, mainImage, formatted_date, formatted_date)
             refi_recap_list.append(vars(a))
 
-    return refi_recap_list
+    return refi_recap_list[0:3]
 
 def newsletter():
     newsletter_list = []

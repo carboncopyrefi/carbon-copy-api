@@ -104,7 +104,7 @@ def refi_weekly():
     return episode_list
 
 def refi_weekly_episode(slug):
-    params = "filter__field_3466508__=" + slug
+    params = "filter__field_3466508__equal=" + slug
     data = utils.get_baserow_data(baserow_table_refi_weekly, params)
 
     for episode in data['results']:

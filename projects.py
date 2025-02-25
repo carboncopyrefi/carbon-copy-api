@@ -1,4 +1,4 @@
-import utils, feedparser, external, re, markdown, config, db, requests
+import utils, feedparser, external, re, markdown, config, db, requests, os, json
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -42,96 +42,154 @@ class Project:
         self.protocol = protocol
         self.response = responses
 
-def project_details(slug):
 
-    # Get company_id from Baserow to use in other requests
-    company_params = "filter__field_1248804__equal=" + slug + "&Links__join=URL&Category__join=Name,Slug&Coverage__join=Headline,Link,Publication,Publish Date"
-    company_data = utils.get_baserow_data(baserow_table_company, company_params)
-    result = company_data['results'][0]
-    company_id = str(result['id'])
+def project_json():
+    
+    page_size = 200
 
-    # Create link list
-    l_list = []
+    # Get survey responses
+    response_data = utils.get_baserow_data(baserow_table_company_response, "")
+    responses = response_data['results']
 
-    for l in result['Links']:
-        platform = l['value']
-        icon = utils.contact_icon(platform.lower())
-        l_dict = {"platform": platform, "url": l['URL'], "icon": icon}
-        l_list.append(l_dict)
-
-    # Get data from Founder and link tables
-    f_list = []
-
-    founder_params = "filter__field_1139228__link_row_has=" + company_id + "&Links__join=URL"
+    # Get founders
+    founder_params = "Links__join=URL&filter__field_1139228__not_empty"
     founder_data = utils.get_baserow_data(baserow_table_company_founder, founder_params)
+    founders = founder_data['results']
 
-    for f in founder_data['results']:
-        founder_name = f['Name']
-        url = None
-        founder_link_list = []
+    total_founder_pages = (founder_data['count'] + page_size - 1) // page_size
 
-        if len(f['Links']) > 0:
-            for l in f['Links']:
-                url = l['URL']
-                platform = utils.contact_icon(l['value'].lower())
-                founder_link_dict = {"platform": platform, "url": url}
-                founder_link_list.append(founder_link_dict)
+    for founder_page in range(2, total_founder_pages + 1):
+        founder_new_params = founder_params + f"&page={founder_page}"
+        data = utils.get_baserow_data(baserow_table_company_founder, founder_new_params)
+        founders.extend(data['results'])
 
-        else:
-            pass
+    # Get news
+    news_data = utils.get_baserow_data(baserow_table_company_news, "")
+    news = news_data['results']
 
-        f_dict = {"name": founder_name, "platforms": founder_link_list}
-        f_list.append(f_dict)
+    total_news_pages = (news_data['count'] + page_size - 1) // page_size
 
-    # Create Category list
-    cat_list = []
+    for news_page in range(2, total_news_pages + 1):
+        news_params = f"&page={news_page}"
+        data = utils.get_baserow_data(baserow_table_company_news, news_params)
+        news.extend(data['results'])
 
-    for cat in result['Category']:
-        cat_dict = {"name": cat['Name'], "slug": cat['Slug']}
-        cat_list.append(cat_dict)
+    
+    # Get projects
+    p_list = []
+    
+    params = "filter__field_1248804__not_empty&size=" + str(page_size) + "&Links__join=URL&Category__join=Name,Slug&Coverage__join=Headline,Link,Publication,Publish Date"
+    data = utils.get_baserow_data(baserow_table_company, params)
+    projects = data['results']
 
-    # Get data from Coverage table
-    c_list = []
+    total_pages = (data['count'] + page_size - 1) // page_size
 
-    for a in result['Coverage']:
-        published_time = datetime.strptime(a['Publish Date'], "%Y-%m-%d")
-        formatted_time = published_time.strftime(date_format)
-        c_dict = {"headline": a['Headline'], "publication": a['Publication']['value'], "url": a['Link'], "date": formatted_time, "sort_date": published_time}
-        c_list.append(c_dict)
+    for page in range(2, total_pages + 1):
+        paginated_params = params + f"&page={page}"
+        data = utils.get_baserow_data(baserow_table_company, paginated_params)
+        projects.extend(data['results'])
 
-    sorted_c_list = sorted(c_list, key=lambda d: d['sort_date'], reverse=True)
+    for result in projects:
+        company_id = str(result['id'])
+        company_name = result['Name']
 
-    # Get data from News table
-    n_dict = {}
-    n_list = []
-    news_params = "filter__field_1156934__link_row_has=" + company_id
-    news_data = utils.get_baserow_data(baserow_table_company_news, news_params)
+        # Create link list
+        l_list = []
 
-    for n in news_data['results']:
-        published_time = datetime.strptime(n['Created on'], "%Y-%m-%dT%H:%M:%S.%fZ")
-        formatted_time = published_time.strftime(date_format)
-        n_dict = {"headline": n['Headline'], "snippet": n['Snippet'], "url": n['Link'], "date": formatted_time, "sort_date": published_time}
-        n_list.append(n_dict)
+        for l in result['Links']:
+            platform = l['value']
+            icon = utils.contact_icon(platform.lower())
+            l_dict = {"platform": platform, "url": l['URL'], "icon": icon}
+            l_list.append(l_dict)
 
-    sorted_n_list = sorted(n_list, key=lambda d:d['sort_date'], reverse=True)
+        # Get data from Founder and link tables
+        f_list = []
 
-    # Get data from RegenSurveyResponse table
-    r_dict = {}
-    r_list = []
-    response_params = "filter__field_1887993__link_row_has=" + company_id
-    response_data = utils.get_baserow_data(baserow_table_company_response, response_params)
+        for f in founders:
+            if any(c['value'] == company_name for c in f['Company'] ):
+                founder_name = f['Name']
+                url = None
+                founder_link_list = []
 
-    for r in response_data['results']:
-        r_dict = {"survey": r['Survey'][0]['value']}
-        r_list.append(r_dict)
+                if len(f['Links']) > 0:
+                    for l in f['Links']:
+                        url = l['URL']
+                        platform = utils.contact_icon(l['value'].lower())
+                        founder_link_dict = {"platform": platform, "url": url}
+                        founder_link_list.append(founder_link_dict)
 
-    sorted_r_list = sorted(r_list, key=lambda d:d['survey'], reverse=True)
+                else:
+                    pass
 
-    # Create project object and return it
-    project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], cat_list, result['Logo'], f_list, sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list)
-    project_dict = vars(project)
+                f_dict = {"name": founder_name, "platforms": founder_link_list}
+                f_list.append(f_dict)
 
-    return project_dict
+        # Create Category list
+        cat_list = []
+
+        for cat in result['Category']:
+            cat_dict = {"name": cat['Name'], "slug": cat['Slug']}
+            cat_list.append(cat_dict)
+
+        # Get data from Coverage table
+        c_list = []
+
+        for a in result['Coverage']:
+            published_time = datetime.strptime(a['Publish Date'], "%Y-%m-%d")
+            formatted_time = published_time.strftime(date_format)
+            unix_time = int(published_time.timestamp())
+            c_dict = {"headline": a['Headline'], "publication": a['Publication']['value'], "url": a['Link'], "date": formatted_time, "sort_date": unix_time}
+            c_list.append(c_dict)
+
+        sorted_c_list = sorted(c_list, key=lambda d: d['sort_date'], reverse=True)
+
+        # Get data from News table
+        n_dict = {}
+        n_list = []
+
+        for n in news:
+            if any(c['value'] == company_name for c in n['Company'] ):
+                published_time = datetime.strptime(n['Created on'], "%Y-%m-%dT%H:%M:%S.%fZ")
+                formatted_time = published_time.strftime(date_format)
+                unix_time = int(published_time.timestamp())
+                n_dict = {"headline": n['Headline'], "url": n['Link'], "date": formatted_time, "sort_date": unix_time}
+                n_list.append(n_dict)
+
+        sorted_n_list = sorted(n_list, key=lambda d:d['sort_date'], reverse=True)
+
+        # Get data from RegenSurveyResponse table
+        r_dict = {}
+        r_list = []
+
+        for r in responses:
+            if any(c['value'] == company_name for c in r['Company'] ):
+                r_dict = {"survey": r['Survey'][0]['value']}
+                r_list.append(r_dict)
+
+        sorted_r_list = sorted(r_list, key=lambda d:d['survey'], reverse=True)
+
+        # Create project object and return it
+        project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], cat_list, result['Logo'], f_list, sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list)
+        p_list.append(vars(project))
+
+    output_file = "projects.json"
+    os.remove(output_file)
+
+    with open("projects.json", "w") as _file:
+        json.dump(p_list, _file)
+
+    return "Success"
+
+
+def project_details(slug):
+    file_path = os.path.join(os.getcwd(), 'api', 'assets', 'projects.json')
+    # file_path = "projects.json"
+    with open(file_path, "r") as _file:
+        data = json.load(_file)
+
+    result = next((item for item in data if item["slug"] == slug), None)
+
+    return result
 
 def top_projects_list():
     p_list = []

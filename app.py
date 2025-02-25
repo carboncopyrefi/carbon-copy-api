@@ -50,6 +50,13 @@ def projectsList():
     response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
     return response
 
+@app.route('/project-json', methods=['GET'])
+def projectsJson():
+    data = projects.project_json()
+    response = jsonify(data)
+    response.headers.add(config.ACCESS_CONTROL_ORIGIN_HEADER, config.ACCESS_CONTROL_ORIGIN_VALUE)
+    return response
+
 @app.route('/projects/categories/<slug>', methods=['GET'])
 def categoryProjects(slug):
     data = categories.category_projects(slug)
