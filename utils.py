@@ -1,4 +1,4 @@
-import requests, keys
+import requests, keys, config
 from flask import json
 from collections import defaultdict
 from datetime import datetime
@@ -11,6 +11,7 @@ client = Warpcast(mnemonic=keys.WARPCAST_KEY)
 
 baserow_api = "https://api.baserow.io/api/database/rows/table/"
 baserow_token = keys.BASEROW_TOKEN
+date_format = config.DATE_FORMAT
 
 def get_baserow_data(table_id, params):
     url = baserow_api + table_id + "/?user_field_names=true&" + params
@@ -59,7 +60,14 @@ def get_giveth_data(slug):
     query = f"""
         query {{
             projectBySlug(slug:"{ slug }") {{
-            totalDonations
+                id
+                totalDonations
+                status {{
+                    name
+                }}
+                adminUser {{
+                    walletAddress
+                }}
             }}
         }}
         """
@@ -71,7 +79,7 @@ def get_giveth_data(slug):
         total_donations = float(result['data']['projectBySlug']['totalDonations'])
         formatted_total_donations = '{:,.2f}'.format(total_donations)
         formatted_response = {
-            "round": "Cumulative",
+            "round": "Donations",
             "amount": formatted_total_donations,
             "funding_type": "Giveth",
             "url": "https://giveth.io/project/" + slug,
@@ -79,6 +87,75 @@ def get_giveth_data(slug):
             "year": None
         }
         return formatted_response
+    else:
+        raise Exception(f"Query failed to run with a {response.status_code}. {response.text}")
+    
+def get_giveth_qf_fundraising_data(slug):
+    f_list = []
+    query = f"""
+        query {{
+            projectBySlug(slug:"{ slug }") {{
+                id
+                adminUser {{
+                    walletAddress
+                }}
+                qfRounds {{
+                    id
+                    name
+                    endDate
+                    isActive
+                }}
+            }}
+        }}
+        """
+
+    api = "https://mainnet.serve.giveth.io/graphql"
+    response = requests.post(api, json={'query': query})
+
+    if response.status_code == 200:
+        result = response.json()
+        id = result['data']['projectBySlug']['id']
+        qf_rounds = result['data']['projectBySlug']['qfRounds']
+
+        for round in qf_rounds:
+            if round['isActive'] == False:
+                round_name = round['name']
+                round_date = parse_datetime(round['endDate'])
+                formatted_round_date = round_date.strftime(date_format)
+                round_id = round['id']
+                qf_query = f"""
+                    query {{
+                        getQfRoundHistory(projectId: { id }, qfRoundId: { round_id } ) {{
+                            matchingFundAmount
+                        }}
+                    }}
+                    """
+                qf_response = requests.post(api, json={'query': qf_query})
+                
+                if qf_response.status_code == 200:
+                    qf_result = qf_response.json()
+                    if qf_result['data']['getQfRoundHistory']['matchingFundAmount'] is not None:
+                        matching_amount = float(qf_result['data']['getQfRoundHistory']['matchingFundAmount'])
+                        formatted_matching_amount = '{:,.2f}'.format(matching_amount)
+
+                        f_item = {
+                            "round_id": round_id,
+                            "round_name": round_name,
+                            "round_date": round_date,
+                            "round_display_date": formatted_round_date,
+                            "matching_amount": formatted_matching_amount
+                        }
+                        f_list.append(f_item)
+                    else:
+                        pass
+                    
+
+                    
+            else:
+                pass
+
+        return f_list
+    
     else:
         raise Exception(f"Query failed to run with a {response.status_code}. {response.text}")
     
@@ -104,6 +181,7 @@ def parse_datetime(datetime_str):
         "%a, %d %b %Y %H:%M:%S %Z",
         "%a, %d %b %Y %H:%M:%S %z",
         "%Y-%m-%d",
+        "%Y-%m-%dT%H:%M:%S.%fZ",
         "%B %d, %Y"
     ]
 
