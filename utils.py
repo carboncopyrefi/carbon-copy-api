@@ -79,7 +79,7 @@ def get_giveth_data(slug):
         total_donations = float(result['data']['projectBySlug']['totalDonations'])
         formatted_total_donations = '{:,.2f}'.format(total_donations)
         formatted_response = {
-            "round": "Donations",
+            "round": "Donations & Matching",
             "amount": formatted_total_donations,
             "funding_type": "Giveth",
             "url": "https://giveth.io/project/" + slug,
@@ -231,11 +231,11 @@ def medium_icon(medium):
 
 def cast_to_farcaster(content):
     for item in content['items']:
-        if len(item['Headline']) > 1 and len(item['Link']) > 1 and item['Display'] is True:
-            cast_body = item['Headline']
+        if len(item['Headline']) > 1 and len(item['Link']) > 1 and len(item['Snippet']) >1 and item['Display'] is True:
+            cast_body = item['Headline'] + "\n\n" + item['Snippet']
             embed = item['Link']
 
-            response = client.post_cast(cast_body, [embed], None, "refi")
+            response = client.post_cast(cast_body, [embed], None, None)
 
             return response.cast.hash
         else:

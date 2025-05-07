@@ -13,7 +13,7 @@ dune = DuneClient(keys.DUNE_KEY)
 
 metric_list = []
 params = "filter__field_2405062__not_empty&include=Impact Metrics JSON"
-# params = "filter__field_1248804__equal=refi-hub&include=Slug,Impact Metrics JSON"
+# params = "filter__field_1248804__equal=cleanify&include=Slug,Impact Metrics JSON"
 impact_data = utils.get_baserow_data(baserow_table_company, params)
 
 for json_file in impact_data['results']:
@@ -134,17 +134,41 @@ for json_file in impact_data['results']:
                         result = response.json()['data'][impact['result_key']][impact['result_index']]
                         result_list.append(result)
 
-                for metric in impact['metrics']:
-                    metric_name = metric['db_id']
-                    cumulative_value = 0
-                    
-                    for r in result_list:
-                        if metric['result_key'] in r:
-                            cumulative_value += float(r[metric['result_key']])
-            
-                    i = db.CompanyImpactData(metric_name, cumulative_value, date, None)
+                        for metric in impact['metrics']:
+                            metric_name = metric['db_id']
+                            cumulative_value = 0
+                            
+                            for r in result_list:
+                                if metric['result_key'] in r:
+                                    cumulative_value += float(r[metric['result_key']])
 
-                    metric_list.append(i)
+                            i = db.CompanyImpactData(metric_name, cumulative_value, date, None)
+                            
+                            metric_list.append(i)
+            else:
+                response = requests.post(impact['api'], json={'query': impact['graphql'], "variables": impact['variables']})
+
+                if response.status_code == 200:
+                    if impact['result_index'] is not None:
+                        result = response.json()['data'][impact['result_key']][impact['result_index']]
+                    else:
+                        result = response.json()['data'][impact['result_key']]
+
+                    result_list.append(result)
+
+                    for metric in impact['metrics']:
+                        metric_name = metric['db_id']
+
+                        for r in result_list:
+                            if metric['result_key'] in r:
+                                value = float(r[metric['result_key']])
+                        
+                        if metric['operator'] == "divide":
+                            value = value / metric['denominator']
+
+                        i = db.CompanyImpactData(metric_name, value, date, None)
+
+                        metric_list.append(i)
 
         if impact['source'] == "regen":
             date = date = utils.get_formatted_date()
@@ -218,7 +242,7 @@ for json_file in impact_data['results']:
                 if credit_class != "KSH01" and credit_class != "C03":
                     bridged_amount += float(message.retired_amount) + float(message.tradable_amount)
 
-                if credit_class == "KSH01":
+                if credit_class == "KSH01" or credit_class == "USS01":
                     onchain_issued_amount += float(message.retired_amount) + float(message.tradable_amount)
 
             for metric in impact['metrics']:
@@ -265,16 +289,16 @@ for json_file in impact_data['results']:
 
 try:
     db.addImpactData(metric_list)
-    # row = requests.post(
-    #     "https://api.baserow.io/api/database/rows/table/349685/batch/?user_field_names=true",
-    #     headers={
-    #         'Authorization': keys.IMPACT_METRICS_BASEROW_TOKEN,
-    #         'Content-Type': 'application/json'
-    #     },
-    #     json={
-    #         "items": metric_list
-    #     }
-    # )ccc
+#     # row = requests.post(
+#     #     "https://api.baserow.io/api/database/rows/table/349685/batch/?user_field_names=true",
+#     #     headers={
+#     #         'Authorization': keys.IMPACT_METRICS_BASEROW_TOKEN,
+#     #         'Content-Type': 'application/json'
+#     #     },
+#     #     json={
+#     #         "items": metric_list
+#     #     }
+#     # )
 except Exception as error:
     print("Could not update metrics", error)
 
