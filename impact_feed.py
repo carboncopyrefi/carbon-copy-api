@@ -7,13 +7,16 @@ from datetime import datetime, timedelta
 baserow_table_company = config.BASEROW_TABLE_COMPANY
 date_format = config.DATE_FORMAT
 
-params = "filter__field_2350680__not_empty&include=Karma Slug, Name, Slug"
-data = utils.get_baserow_data(baserow_table_company, params)
-project_list = data['results']
+file_path = "projects.json"
+with open(file_path, "r") as _file:
+    data = json.load(_file)
+
+result = [project for project in data if project.get("karma_slug") is not None]
+
 impact_list = []
 
-for project in project_list:
-    slug = project['Slug']
+for project in result:
+    slug = project['slug']
     api = "https://gapapi.karmahq.xyz/projects/" + slug + "/impacts"
     response = requests.get(api)
     if response.status_code == 200:
@@ -27,12 +30,13 @@ for project in project_list:
                     id = i['uid']
                     date = datetime.fromtimestamp(i['data']['completedAt']).strftime(date_format)
                     details = markdown.markdown(i['data']['impact'] + "<br /><br />" + i['data']['proof'])
+                    name = markdown.markdown(i['data']['work'])
                     if len(i['verified']) < 1:
                         status = "Unverified"
                     else:
                         status = "Verified"
 
-                    item = external.Impact(id, i['data']['work'], project['Name'], i['data']['completedAt'], date, details, status, "text")
+                    item = external.Impact(id, name, project['name'], i['data']['completedAt'], date, details, status, "text")
                     impact_list.append(vars(item))
         else:
             pass

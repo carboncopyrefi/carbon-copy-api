@@ -25,7 +25,7 @@ class TopProject:
         self.location = location
 
 class Project:
-    def __init__(self, id, slug, name, description_short, links, sectors, categories, logo, founder, coverage, news, top16, location, protocol, responses):
+    def __init__(self, id, slug, name, description_short, links, sectors, categories, logo, founder, coverage, news, top16, location, protocol, responses, karma_slug):
         self.id = id
         self.slug = slug
         self.name = name
@@ -41,6 +41,7 @@ class Project:
         self.location = location
         self.protocol = protocol
         self.response = responses
+        self.karma_slug = karma_slug
 
 
 def project_json():
@@ -64,14 +65,15 @@ def project_json():
         founders.extend(data['results'])
 
     # Get news
-    news_data = utils.get_baserow_data(baserow_table_company_news, "")
+    news_params = "order_by=-Created on"
+    news_data = utils.get_baserow_data(baserow_table_company_news, news_params)
     news = news_data['results']
 
     total_news_pages = (news_data['count'] + page_size - 1) // page_size
 
     for news_page in range(2, total_news_pages + 1):
-        news_params = f"&page={news_page}"
-        data = utils.get_baserow_data(baserow_table_company_news, news_params)
+        news_params_new = news_params + f"&page={news_page}"
+        data = utils.get_baserow_data(baserow_table_company_news, news_params_new)
         news.extend(data['results'])
 
     
@@ -123,6 +125,8 @@ def project_json():
 
                 f_dict = {"name": founder_name, "platforms": founder_link_list}
                 f_list.append(f_dict)
+            else:
+                pass
 
         # Create Category list
         cat_list = []
@@ -154,6 +158,8 @@ def project_json():
                 unix_time = int(published_time.timestamp())
                 n_dict = {"headline": n['Headline'], "url": n['Link'], "date": formatted_time, "sort_date": unix_time}
                 n_list.append(n_dict)
+            else:
+                pass
 
         sorted_n_list = sorted(n_list, key=lambda d:d['sort_date'], reverse=True)
 
@@ -165,11 +171,13 @@ def project_json():
             if any(c['value'] == company_name for c in r['Company'] ):
                 r_dict = {"survey": r['Survey'][0]['value']}
                 r_list.append(r_dict)
+            else:
+                pass
 
         sorted_r_list = sorted(r_list, key=lambda d:d['survey'], reverse=True)
 
         # Create project object and return it
-        project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], cat_list, result['Logo'], f_list, sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list)
+        project = Project(company_id, result['Slug'], result['Name'], result['One-sentence Description'], l_list, result['Sector'], cat_list, result['Logo'], f_list, sorted_c_list, sorted_n_list, result['Top 16'], result['Location'], result['Protocol'], sorted_r_list, result['Karma slug'])
         p_list.append(vars(project))
 
     output_file = "projects.json"
@@ -182,8 +190,8 @@ def project_json():
 
 
 def project_details(slug):
-    file_path = os.path.join(os.getcwd(), 'api', 'assets', 'projects.json')
-    # file_path = "projects.json"
+    #file_path = os.path.join(os.getcwd(), 'api', 'assets', 'projects.json')
+    file_path = "projects.json"
     with open(file_path, "r") as _file:
         data = json.load(_file)
 
@@ -393,6 +401,8 @@ def project_content(slug):
                     status = "Completed"
                     if "reason" in m['completed']['data'].keys():
                         completed_msg = markdown.markdown(m['completed']['data']['reason'])
+                        if "proofOfWork" in m['completed']['data'].keys():
+                            completed_msg += "\n\n" + "<a href=" + "'" + m['completed']['data']['proofOfWork'] + "'" + "target='_blank'>" + m['completed']['data']['proofOfWork'] + "</a>"
                     else:
                         completed_msg = None
                 elif datetime.fromtimestamp(m['data']['endsAt']) > datetime.now():
@@ -416,12 +426,18 @@ def project_content(slug):
                 activity_list.append(vars(update))
         
         for update in karma_data['updates']:
+            completed_msg = ""
+            update_status = None
+            if 'deliverables' in update['data']:
+                for d in update['data']['deliverables']:
+                    completed_msg += markdown.markdown("- [" + d['name'] + "](" + d['proof'] + ")")
+                    update_status = "Delivered"
             description = markdown.markdown(update['data']['text'])
             due_date_string = datetime.strptime(update['createdAt'],"%Y-%m-%dT%H:%M:%S.%fZ")
             due_date_unix = datetime.timestamp(due_date_string)          
-            update = external.Activity(update['data']['title'], description, None, None, due_date_unix, None, "Update")
+            update = external.Activity(update['data']['title'], description, update_status, None, due_date_unix, completed_msg, "Update")
             activity_list.append(vars(update))
-
+            
         sorted_activity_list = sorted(activity_list, key=lambda d: d['due_date_unix'], reverse=True)
 
         # Get Karma GAP impact data
