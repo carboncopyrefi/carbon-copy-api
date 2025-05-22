@@ -16,7 +16,7 @@
                     "query": "",
                     "list_name": "inversion_acumulada",
                     "result_key": "value",
-                    "denominator": 420700000,
+                    "denominator": 420700,
                     "operator": "divide",
                     "note_to_dev": "denominator takes into account currency exchange rate of 4,207COP/1 USD"
                 },

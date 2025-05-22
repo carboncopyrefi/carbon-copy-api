@@ -36,7 +36,7 @@ def get_dashboard_data():
     fundraising_project_list = []
 
     page_size = "200"
-    fundraising_params = "size=" + page_size + "&order_by=-Date&filter__field_2209786__single_select_equal=1686865"
+    fundraising_params = "size=" + page_size + "&order_by=-Date&filter__field_2209786__single_select_is_any_of=1686865,1688192"
     fundraising_data = utils.get_baserow_data(baserow_table_company_fundraising, fundraising_params)
     fundraising_records = fundraising_data['results']
 
