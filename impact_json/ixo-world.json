@@ -7,8 +7,8 @@
             "body": null,
             "result_key": "getTokensTotalForCollectionAmounts",
             "result_index": "CARBON",
-            "global_denominator": null,
-            "global_operator": null,
+            "global_denominator": 1000,
+            "global_operator": "divide",
             "graphql": "query CollectionTokenTotalAmounts { getTokensTotalForCollectionAmounts( did: {query} allEntityRetired: true )}",
             "query": [
                         "did:ixo:entity:eb98bb2c92a62557b6c88c6f80e8d258",
