@@ -1,0 +1,37 @@
+{
+    "impact_data": [
+        {
+            "source": "client",
+            "api": "https://federation.coalapay.org/api/v2/users/stats",
+            "method": "GET",
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 109,
+                    "result_key": "beneficiaries_count",
+                    "denominator": null,
+                    "operator": null,
+                    "query": ""
+                },
+                {
+                    "db_id": 108,
+                    "result_key": "usd",
+                    "denominator": null,
+                    "operator": null,
+                    "query": ""
+                },
+                {
+                    "db_id": 110,
+                    "result_key": "countries_count",
+                    "denominator": null,
+                    "operator": null,
+                    "query": ""
+                }
+            ]
+        }
+    ]
+}
