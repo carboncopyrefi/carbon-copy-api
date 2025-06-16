@@ -1,0 +1,28 @@
+{
+    "impact_data": [
+        {
+            "source": "graphql",
+            "api": "https://graph.vet/subgraphs/name/vebetter/dao",
+            "method": null,
+            "body": null,
+            "result_key": "apps",
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "graphql": "query total { apps { poolAllocations }}",
+            "variables": null,
+            "query": "",
+            "metrics": [
+                {
+                    "db_id": "111",
+                    "result_key": "poolAllocations",
+                    "result_index": null,
+                    "denominator": 0.114,
+                    "note_to_dev": "Since it doesn't seem possible to get each round allocation via the API, the denominator is the median price of B3TR since it was added to CoinGecko.",
+                    "operator": "multiply",
+                    "max_age": null
+                }
+            ]
+        }
+    ]
+}

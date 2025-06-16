@@ -53,7 +53,7 @@ def project_json():
     responses = response_data['results']
 
     # Get founders
-    founder_params = "Links__join=URL&filter__field_1139228__not_empty"
+    founder_params = "Links__join=URL&filter__field_1139228__not_empty&size=" + str(page_size)
     founder_data = utils.get_baserow_data(baserow_table_company_founder, founder_params)
     founders = founder_data['results']
 
@@ -65,7 +65,7 @@ def project_json():
         founders.extend(data['results'])
 
     # Get news
-    news_params = "order_by=-Created on"
+    news_params = "order_by=-Created on&size=" + str(page_size)
     news_data = utils.get_baserow_data(baserow_table_company_news, news_params)
     news = news_data['results']
 

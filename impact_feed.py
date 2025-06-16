@@ -1,8 +1,7 @@
 import markdown, external, requests, utils, os, config
 from flask import json
 from datetime import datetime, timedelta
-
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 baserow_table_company = config.BASEROW_TABLE_COMPANY
 date_format = config.DATE_FORMAT
@@ -11,42 +10,69 @@ file_path = "projects.json"
 with open(file_path, "r") as _file:
     data = json.load(_file)
 
-result = [project for project in data if project.get("karma_slug") is not None]
+result = [project for project in data if project.get("karma_slug")]
 
-impact_list = []
+current_timestamp = datetime.now()
+three_months_ago = current_timestamp - timedelta(days=90)
 
-for project in result:
-    slug = project['slug']
-    api = "https://gapapi.karmahq.xyz/projects/" + slug + "/impacts"
-    response = requests.get(api)
-    if response.status_code == 200:
-        impacts =  response.json()
-        if impacts is not None:
-            for i in impacts:
-                current_timestamp = datetime.now()
-                three_months_ago = current_timestamp - timedelta(days=90)
+def fetch_updates(project):
+    local_updates = []
+    slug = project['karma_slug']
+    api = f"https://gapapi.karmahq.xyz/projects/{slug}"
+    
+    try:
+        response = requests.get(api, timeout=20)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Request failed for {slug}: {e}")
+        return []
 
-                if three_months_ago <= datetime.fromtimestamp(i['data']['completedAt']) <= current_timestamp:
-                    id = i['uid']
-                    date = datetime.fromtimestamp(i['data']['completedAt']).strftime(date_format)
-                    details = markdown.markdown(i['data']['impact'] + "<br /><br />" + i['data']['proof'])
-                    name = markdown.markdown(i['data']['work'])
-                    if len(i['verified']) < 1:
-                        status = "Unverified"
-                    else:
-                        status = "Verified"
+    updates = response.json() or []
+    
+    for update in updates['updates']:
+        data = update.get('data', {})
+        end_date_str = data.get('endDate')
+        if not end_date_str:
+            continue
 
-                    item = external.Impact(id, name, project['name'], i['data']['completedAt'], date, details, status, "text")
-                    impact_list.append(vars(item))
-        else:
-            pass
-    else:
-        raise Exception(f"Failed to fetch Karma GAP data with status {response.status_code}. {response.text}")
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+        except ValueError:
+            continue
 
-sorted_impact_list = sorted(impact_list, key=lambda d:d['unit'], reverse=True)
+        if not (three_months_ago <= end_date <= current_timestamp):
+            continue
+
+        id = update['uid']
+        name = data.get('title', 'Untitled')
+        date = end_date.strftime(date_format)
+        details = markdown.markdown(data.get('text', '') + '<p class="fw-bold">Deliverables</p>')
+
+        for deliverable in data.get('deliverables', []):
+            details += markdown.markdown(f"- [{deliverable['name']}]({deliverable['proof']})")
+
+        item = external.Impact(id, name, project['name'], end_date_str, date, details, None, "text")
+        local_updates.append(vars(item))
+    
+    return local_updates
+
+# Run in parallel
+updates_list = []
+with ThreadPoolExecutor(max_workers=8) as executor:
+    futures = [executor.submit(fetch_updates, project) for project in result]
+    for future in as_completed(futures):
+        try:
+            updates = future.result()
+            if updates:
+                updates_list.extend(updates)
+        except Exception as e:
+            print(f"Error in future: {e}")
+
+# Sort the final list
+sorted_updates_list = sorted(updates_list, key=lambda d: d['unit'], reverse=True)
 
 output_file = "impact_feed.json"
 os.remove(output_file)
 
 with open("impact_feed.json", "w") as _file:
-    json.dump(sorted_impact_list, _file)
+    json.dump(sorted_updates_list, _file)
