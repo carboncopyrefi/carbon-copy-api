@@ -124,21 +124,13 @@ def get_dashboard_data():
             if series_name is None:
                 series_name = items[0].metric.name
 
-            for metric_date, i in date_grouped_data.items():
-                if i[0].metric.type == "Single":
-                    chart_metric_value = 0
-                    for single_item in i:     
-                        chart_metric_value += float(single_item.value) 
+            for metric_date, items_on_date in sorted(date_grouped_data.items()):
+                daily_total = 0
+                for item in items_on_date:
+                    daily_total += float(item.value)
 
-                    cumulative_value += chart_metric_value
-                    item_list.append({"x": single_item.date, "y": round(cumulative_value,2)})
-
-                if i[0].metric.type == "Cumulative":
-                    cumulative_chart_value = 0
-                    for cumulative_item in i:
-                        cumulative_chart_value += float(cumulative_item.value)
-                    
-                    item_list.append({"x": cumulative_item.date, "y": round(cumulative_chart_value, 2)})
+                cumulative_value += daily_total
+                item_list.append({"x": metric_date, "y": round(cumulative_value, 2)})
 
             chart_list.append({"series": metric_name, "data": item_list, "key": metric_key})
 
