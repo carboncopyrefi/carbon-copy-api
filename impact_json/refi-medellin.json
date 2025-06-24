@@ -1,0 +1,34 @@
+{
+    "impact_data": [
+        {
+            "source": "dune",
+            "api": null,
+            "method": null,
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 112,
+                    "query": "5189226",
+                    "result_key": "Distributed",
+                    "result_index": 0,
+                    "denominator": 4050,
+                    "operator": "divide",
+                    "max_age": 172
+                },
+                {
+                    "db_id": 113,
+                    "query": "5189226",
+                    "result_key": "Recipients",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 172
+                }
+            ]
+        }
+    ]
+}
