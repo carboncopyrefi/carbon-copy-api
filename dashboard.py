@@ -19,11 +19,20 @@ class DashboardMetric():
         self.projects = projects
 
 def aggregate_latest_cumulative_metric_values(group):
-    group.sort(key=lambda x:x.date, reverse=True)
-    latest_date = group[0].date
-    # Filter and aggregate metric_values for items with the latest date
-    latest_items = [float(item.value) for item in group if item.date == latest_date]
-    return {"date": latest_date, "sum": sum(latest_items)}    
+    latest_by_metric = {}
+
+    for item in group:
+        metric_id = item.metric.id
+        current_latest = latest_by_metric.get(metric_id)
+
+        if not current_latest or item.date > current_latest.date:
+            latest_by_metric[metric_id] = item
+
+    latest_items = latest_by_metric.values()
+    total_sum = sum(float(item.value) for item in latest_items)
+    latest_date = max(item.date for item in latest_items)
+
+    return {"date": latest_date, "sum": total_sum}   
 
 def get_dashboard_data():
     chart_list = []
