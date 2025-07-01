@@ -1,0 +1,31 @@
+{
+    "impact_data": [
+        {
+            "source": "client",
+            "api": "https://ethapi.impactstake.com/api/landing",
+            "method": "GET",
+            "body": null,
+            "result_key": "data",
+            "result_index": null,
+            "date_key": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 115,
+                    "query": "",
+                    "result_key": "sumStakeUsd",
+                    "denominator": null,
+                    "operator": null
+                },
+                {
+                    "db_id": 114,
+                    "query": "",
+                    "result_key": "sumDonationUsd",
+                    "denominator": null,
+                    "operator": null
+                }
+            ]
+        }
+    ]
+}
