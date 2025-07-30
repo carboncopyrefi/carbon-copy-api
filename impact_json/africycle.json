@@ -1,0 +1,61 @@
+{
+    "impact_data": [
+        {
+            "source": "dune",
+            "api": null,
+            "method": null,
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "global_denominator": null,
+            "global_operator": null,
+            "metrics": [
+                {
+                    "db_id": 118,
+                    "query": "5513405",
+                    "result_key": "Carbon Offset",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 400
+                },
+                {
+                    "db_id": 116,
+                    "query": "5516352",
+                    "result_key": "Waste Collected",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 400
+                },
+                {
+                    "db_id": 117,
+                    "query": "5516393",
+                    "result_key": "Rewards Paid",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 400
+                },
+                {
+                    "db_id": 119,
+                    "query": "5517077",
+                    "result_key": "Users",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 400
+                },
+                {
+                    "db_id": 120,
+                    "query": "5518239",
+                    "result_key": "Waste Collection Actions",
+                    "result_index": 0,
+                    "denominator": null,
+                    "operator": null,
+                    "max_age": 400
+                }
+            ]
+        }
+    ]
+}
