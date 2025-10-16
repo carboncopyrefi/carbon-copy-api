@@ -8,15 +8,15 @@ There is also a function that updates impact metrics stored in our database.
 
 Host: api.carboncopy.news
 
-/projects - Get all projects in the CARBON Copy database
-/projects/{project_slug} - Get static data for a specific project
-/projects/{project_slug}/content - Get dynamic data for a specific project
-/projects/categories/{category_slug} - Get category profile data
-/projects/categories/tokens - Get tokens issued by projects in a specific category
-/people - Get list of builders in the ReFi space
-/news - Get list of recent news items
-/feed - Generates an XML of all ReFi news items
-/knowledge - Get list of resources created by ReFi projects
+- /projects - Get all projects in the CARBON Copy database
+- /projects/{project_slug} - Get static data for a specific project
+- /projects/{project_slug}/content - Get dynamic data for a specific project
+- /projects/categories/{category_slug} - Get category profile data
+- /projects/categories/tokens - Get tokens issued by projects in a specific category
+- /people - Get list of builders in the ReFi space
+- /news - Get list of recent news items
+- /feed - Generates an XML of all ReFi news items
+- /knowledge - Get list of resources created by ReFi projects
 
 ## Want to fork?
 
