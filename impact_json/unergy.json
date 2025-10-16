@@ -2,7 +2,7 @@
     "impact_data": [
         {
             "source": "client",
-            "api": "https://api.unergy.io/api/landing/historicos/",
+            "api": "https://api.unergy.io/api/landing/metrics/",
             "method": "GET",
             "body": null,
             "result_key": null,
@@ -14,30 +14,35 @@
                 {
                     "db_id": 96,
                     "query": "",
-                    "list_name": "inversion_acumulada",
-                    "result_key": "value",
-                    "denominator": 420700,
-                    "operator": "divide",
-                    "note_to_dev": "denominator takes into account currency exchange rate of 4,207COP/1 USD"
+                    "result_key": "total_investment_usd",
+                    "denominator": null,
+                    "operator": null
                 },
                 {
                     "db_id": 94,
                     "query": "",
-                    "result_key": "kw_generados",
-                    "denominator": 1000,
-                    "operator": "divide"
+                    "result_key": "mwh_generated",
+                    "denominator": null,
+                    "operator": null
                 },
                 {
                     "db_id": 93,
                     "query": "",
-                    "result_key": "co2_ahorrado",
+                    "result_key": "co2_ton_avoided",
                     "denominator": null,
                     "operator": null
                 },
                 {
                     "db_id": 95,
                     "query": "",
-                    "result_key": "num_paneles_sum",
+                    "result_key": "modules",
+                    "denominator": null,
+                    "operator": null
+                },
+                {
+                    "db_id": 122,
+                    "query": "",
+                    "result_key": "yield_usd",
                     "denominator": null,
                     "operator": null
                 }

@@ -7,8 +7,6 @@
             "body": null,
             "result_key": "getTokensTotalForCollectionAmounts",
             "result_index": "CARBON",
-            "global_denominator": 1000,
-            "global_operator": "divide",
             "graphql": "query CollectionTokenTotalAmounts { getTokensTotalForCollectionAmounts( did: {query} allEntityRetired: true )}",
             "query": [
                         "did:ixo:entity:eb98bb2c92a62557b6c88c6f80e8d258",
@@ -19,16 +17,16 @@
                     "db_id": 50,
                     "result_key": "minted",
                     "result_index": 0,
-                    "denominator": null,
-                    "operator": null,
+                    "denominator": 1000,
+                    "operator": "divide",
                     "max_age": null
                 },
                 {
                     "db_id": 51,
                     "result_key": "retired",
                     "result_index": 0,
-                    "denominator": null,
-                    "operator": null,
+                    "denominator": 1000,
+                    "operator": "divide",
                     "max_age": null
                 }
             ]

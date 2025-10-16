@@ -1,23 +1,51 @@
 {
     "impact_data": [
         {
-            "source": "dune",
-            "api": null,
-            "method": null,
-            "body": null,
+            "source": "client",
+            "api": "https://fun-rust-production.up.railway.app/headline_farm_stats",
+            "method": "POST",
+            "body": {"urls":["http://95.217.194.59:35015"],"week_number":"{{week}}"},
+            "start_date": {"date": "2025-06-08", "week": 81},
             "result_key": null,
             "result_index": null,
-            "global_denominator": null,
             "global_operator": null,
+            "global_denominator": null,
             "metrics": [
                 {
                     "db_id": 79,
                     "query": "4009342",
-                    "result_key": "cumulative_supply",
-                    "result_index": -1,
+                    "result_key": "carbonCreditsProduced",
+                    "list_name": "filteredFarms",
+                    "result_index": null,
                     "denominator": null,
                     "operator": null,
-                    "max_age": 720
+                    "single": true
+                },
+                {
+                    "db_id": 124,
+                    "query": null,
+                    "result_key": "numActiveFarms",
+                    "result_index": null,
+                    "denominator": null,
+                    "operator": null
+                }
+            ]
+        },
+        {
+            "source": "client",
+            "api": "https://glow.org/api/impact-metrics",
+            "method": "GET",
+            "body": null,
+            "result_key": null,
+            "result_index": null,
+            "metrics": [
+                {
+                    "db_id": 125,
+                    "query": "",
+                    "result_key": "solarPanelsInstalled",
+                    "result_index": null,
+                    "denominator": null,
+                    "operator": null
                 }
             ]
         }

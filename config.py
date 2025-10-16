@@ -29,3 +29,4 @@ MYSQL_DB_NAME="carboncopy$default"
 SSH_HOST="ssh.pythonanywhere.com"
 SSH_PORT=22
 SSH_USER="carboncopy"
+VEBETTER_API = "https://graph.vet/subgraphs/name/vebetter/dao"

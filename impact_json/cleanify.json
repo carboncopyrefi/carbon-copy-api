@@ -1,40 +1,33 @@
 {
     "impact_data": [
         {
-            "source": "graphql",
-            "api": "https://graph2.cleanify.vet/subgraphs/name/cleanify",
-            "method": null,
-            "body": null,
-            "result_key": "platformStats",
-            "result_index": null,
-            "global_denominator": null,
-            "global_operator": null,
-            "graphql": "query Stats($id: ID!) { platformStats(id: $id) { totalMassImpact totalClaimedRewards usersCount }}",
-            "variables": {"id": "0"},
-            "query": "",
+            "source": "vebetter",
+            "result_key": "statsAppSustainabilities",
+            "graphql": "query MyQuery($id: String, $timestamp: Timestamp) { statsAppSustainabilities(where: {app: $id, timestamp_gte: $timestamp} interval: day orderBy: timestamp orderDirection: desc ) { wasteMassTotal carbonTotal timestamp rewards actionsTotal app { participantsCount } } }",
+            "variables": {"id": "0x899de0d0f0b39e484c8835b2369194c4c102b230c813862db383d44a4efe14d3", "timestamp": "1755342311"},
             "metrics": [
                 {
-                    "db_id": "84",
-                    "result_key": "totalMassImpact",
-                    "result_index": 0,
+                    "db_id": 84,
+                    "result_key": "wasteMassTotal",
+                    "result_index": null,
                     "denominator": 1000,
                     "operator": "divide",
                     "max_age": null
                 },
                 {
-                    "db_id": "85",
-                    "result_key": "usersCount",
-                    "result_index": 0,
+                    "db_id": 85,
+                    "result_key": "app",
+                    "result_index": "participantsCount",
                     "denominator": null,
                     "operator": null,
                     "max_age": null
                 },
                 {
-                    "db_id": "86",
-                    "result_key": "totalClaimedRewards",
-                    "result_index": 0,
-                    "denominator": 1e18,
-                    "operator": "divide",
+                    "db_id": 121,
+                    "result_key": "actionsTotal",
+                    "result_index": null,
+                    "denominator": null,
+                    "operator": null,
                     "max_age": null
                 }
             ]

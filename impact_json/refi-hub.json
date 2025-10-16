@@ -25,6 +25,14 @@
                     "result_key": "total",
                     "denominator": null,
                     "operator": null
+                },
+                {
+                    "db_id": 123,
+                    "query": "",
+                    "list_name": "items",
+                    "result_key": "repaidAmount",
+                    "denominator": 1e6,
+                    "operator": "divide"
                 }
             ]
         }
